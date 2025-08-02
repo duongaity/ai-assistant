@@ -5,7 +5,7 @@
 ## 🏗️ Cấu trúc dự án
 
 ```
-workshop1/
+workshop/
 ├── backend/                  # Python Flask API Server
 │   ├── app.py                # Main Flask application với AI integration
 │   ├── requirements.txt      # Python dependencies
@@ -80,28 +80,6 @@ docker-compose up -d --build
 - **🔧 Backend API**: http://localhost:5000  
 - **📖 Swagger API Docs**: http://localhost:5000/swagger/
 - **⚖️ Load Balancer**: http://localhost:80
-
-### Docker Management Commands:
-```bash
-# Xem logs real-time
-docker-compose logs -f
-
-# Stop tất cả services
-docker-compose down
-
-# Restart specific service
-docker-compose restart backend
-docker-compose restart frontend
-
-# Rebuild single service
-docker-compose up --build backend
-
-# Check services status
-docker-compose ps
-
-# Clean up volumes
-docker-compose down -v
-```
 
 ## 💻 Development Mode
 
