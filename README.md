@@ -11,11 +11,42 @@ AI Programming Assistant là một ứng dụng full-stack giúp lập trình vi
 - **Multi-language**: Hỗ trợ 9+ ngôn ngữ lập trình
 - **API Documentation**: Swagger UI tích hợp
 
+## ⚡ Chức năng ứng dụng
+
+### 🤖 AI Chat Assistant
+- **Tư vấn lập trình**: Hỏi đáp về algorithms, data structures, best practices
+- **Giải quyết vấn đề**: Debug code, tìm lỗi và đưa ra giải pháp
+- **Code review**: Đánh giá và đề xuất cải thiện code
+- **Học tập**: Giải thích concepts, patterns và frameworks
+
+### 🔍 Code Analysis
+- **Giải thích code**: Phân tích logic và flow của đoạn code
+- **Code documentation**: Tự động tạo comments và documentation
+- **Security scan**: Phát hiện potential security issues
+- **Performance analysis**: Đánh giá hiệu suất và đề xuất optimization
+
+### Quick Actions
+- **Add Comments**: Tự động thêm comments cho code
+- **Debug Code**: Phát hiện và sửa lỗi trong code
+- **Optimize Code**: Cải thiện performance và clean code
+- **Generate Tests**: Tạo unit tests cho functions/methods
+- **Refactor Code**: Restructure code để dễ đọc và maintain
+- **Format Code**: Tự động format theo coding standards
+
+### Real-time Chat
+- **Hỏi đáp về code**: Giải thích syntax, functions, và logic của đoạn code
+- **Tư vấn architecture**: Thiết kế hệ thống, design patterns, và best practices
+- **Debugging support**: Hỗ trợ tìm và sửa lỗi trong code
+- **Code review**: Đánh giá chất lượng code và đề xuất cải thiện
+- **Learning guidance**: Hướng dẫn học các ngôn ngữ và framework mới
+- **Technical discussions**: Thảo luận về algorithms, data structures, performance
+- **Project consultation**: Tư vấn về công nghệ, tools, và workflow phù hợp
+
 ## 🏗️ Structure
 
 ```
 ai-assistant/
-├── backend/                  # Python Flask API
+├── backend/                 # Python Flask API
 │   ├── app.py               # Main application
 │   ├── requirements.txt     # Dependencies
 │   ├── api/                 # API endpoints
