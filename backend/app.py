@@ -1,439 +1,115 @@
-from flask import Flask, request, jsonify
+"""
+AI Programming Assistant API - Main Application
+
+Cấu trúc modular mới với 3 API modules:
+- Chat API: Giao tiếp với AI Assistant
+- Language API: Quản lý ngôn ngữ lập trình
+- Health API: Monitoring và health checks
+
+Version 3.0.0 - Modular Architecture
+"""
+
+from flask import Flask
 from flask_cors import CORS
-from flasgger import Swagger, swag_from
+from flasgger import Swagger
 import os
-from openai import AzureOpenAI
 from dotenv import load_dotenv
-import traceback
+
+# Import configuration
+from config.swagger_config import swagger_config, swagger_template
+
+# Import services
+from services.ai_service import AIService
+
+# Import API modules
+from api.chat import chat_bp, init_chat_api
+from api.language import language_bp
+from api.health import health_bp, init_health_api
 
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
-
-# Swagger configuration
-swagger_config = {
-    "headers": [],
-    "specs": [
-        {
-            "endpoint": 'apispec_1',
-            "route": '/apispec_1.json',
-            "rule_filter": lambda rule: True,
-            "model_filter": lambda tag: True,
-        }
-    ],
-    "static_url_path": "/flasgger_static",
-    "swagger_ui": True,
-    "specs_route": "/swagger/"
-}
-
-swagger_template = {
-    "swagger": "2.0",
-    "info": {
-        "title": "Code Commenter API",
-        "description": "AI-powered code documentation API using Azure OpenAI",
-        "version": "1.0.0",
-        "contact": {
-            "name": "Code Commenter Team",
-            "email": "support@codecommenter.com"
-        }
-    },
-    "host": "localhost:5000",
-    "basePath": "/api",
-    "schemes": ["http", "https"],
-    "tags": [
-        {
-            "name": "comment",
-            "description": "Code commenting operations"
-        },
-        {
-            "name": "health",
-            "description": "Health check operations"
-        }
-    ]
-}
-
-swagger = Swagger(app, config=swagger_config, template=swagger_template)
-
-class CodeCommenter:
-    """Class để tự động tạo comment cho code"""
-    
-    def __init__(self):
-        """Khởi tạo client Azure OpenAI"""
-        try:
-            self.client = AzureOpenAI(
-                api_version="2024-07-01-preview",
-                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            )
-            self.deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "GPT-4o-mini")
-        except Exception as e:
-            print(f"Error initializing Azure OpenAI client: {e}")
-            self.client = None
-    
-    def _estimate_tokens(self, text):
-        """
-        Ước tính số tokens từ text (xấp xỉ 1 token = 4 characters cho tiếng Anh, 2-3 cho tiếng Việt)
-        
-        Args:
-            text (str): Text cần ước tính
-            
-        Returns:
-            int: Số tokens ước tính
-        """
-        # Công thức ước tính: 1 token ≈ 3-4 characters (trung bình)
-        # Với text có tiếng Việt, tỷ lệ thấp hơn một chút
-        return len(text) // 3
-    
-    def _calculate_max_tokens(self, input_tokens, code_length):
-        """
-        Tính toán max_tokens phù hợp dựa trên input
-        
-        Args:
-            input_tokens (int): Số tokens của input
-            code_length (int): Độ dài code gốc
-            
-        Returns:
-            int: max_tokens được tính toán
-        """
-        # Ước tính output sẽ dài hơn input 2-3 lần (do thêm comment)
-        estimated_output_tokens = input_tokens * 2.5
-        
-        # Tính dựa trên độ dài code: code dài hơn cần nhiều comment hơn
-        code_based_tokens = code_length // 2  # 1 token per 2 characters of code
-        
-        # Lấy giá trị lớn hơn và thêm buffer 20%
-        calculated_tokens = max(estimated_output_tokens, code_based_tokens) * 1.2
-        
-        # Giới hạn min/max tokens
-        min_tokens = 500   # Tối thiểu cho response ngắn
-        max_tokens = 8000  # Tối đa để tránh chi phí cao
-        
-        # Áp dụng giới hạn
-        final_tokens = max(min_tokens, min(int(calculated_tokens), max_tokens))
-        
-        print(f"Token calculation: input={input_tokens}, code_len={code_length}, final_max_tokens={final_tokens}")
-        return final_tokens
-    
-    def process_code(self, code_content, language="java"):
-        """
-        Xử lý code và tạo comments
-        
-        Args:
-            code_content (str): Nội dung code cần được comment
-            language (str): Ngôn ngữ lập trình (java, python, javascript, etc.)
-            
-        Returns:
-            dict: Kết quả xử lý
-        """
-        if not self.client:
-            return {
-                "success": False,
-                "error": "Azure OpenAI client not initialized"
-            }
-            
-        if not code_content:
-            return {
-                "success": False,
-                "error": "No code content provided"
-            }
-        
-        # Tạo prompt dựa trên ngôn ngữ
-        if language.lower() == "java":
-            prompt = f"""
-Bạn là một chuyên gia lập trình Java. Hãy phân tích đoạn code Java sau và thêm các comment tiếng Việt chi tiết:
-
-1. Thêm JavaDoc cho các class, method và constructor
-2. Thêm comment giải thích cho các dòng code phức tạp
-3. Thêm comment mô tả logic và mục đích của từng phần
-4. Giữ nguyên format và cấu trúc code gốc
-5. Comment phải rõ ràng, dễ hiểu và hữu ích
-6. Sử dụng format comment Java chuẩn (// và /* */)
-
-Code Java cần comment:
-```java
-{code_content}
-```
-
-Trả về code Java đã được comment hoàn chỉnh:
-"""
-        elif language.lower() == "python":
-            prompt = f"""
-Bạn là một chuyên gia lập trình Python. Hãy phân tích đoạn code Python sau và thêm các comment tiếng Việt chi tiết:
-
-1. Thêm docstring cho các hàm và class
-2. Thêm comment giải thích cho các dòng code phức tạp
-3. Thêm comment mô tả logic và mục đích của từng phần
-4. Giữ nguyên format và cấu trúc code gốc
-5. Comment phải rõ ràng, dễ hiểu và hữu ích
-
-Code Python cần comment:
-```python
-{code_content}
-```
-
-Trả về code Python đã được comment hoàn chỉnh:
-"""
-        else:
-            prompt = f"""
-Bạn là một chuyên gia lập trình {language}. Hãy phân tích đoạn code sau và thêm các comment tiếng Việt chi tiết:
-
-1. Thêm comment cho các hàm, class và phương thức
-2. Thêm comment giải thích cho các dòng code phức tạp
-3. Thêm comment mô tả logic và mục đích của từng phần
-4. Giữ nguyên format và cấu trúc code gốc
-5. Comment phải rõ ràng, dễ hiểu và hữu ích
-
-Code {language} cần comment:
-```{language}
-{code_content}
-```
-
-Trả về code đã được comment hoàn chỉnh:
-"""
-        
-        try:
-            # Tính toán max_tokens dựa trên độ dài input
-            input_tokens = self._estimate_tokens(prompt)
-            max_tokens = self._calculate_max_tokens(input_tokens, len(code_content))
-            
-            response = self.client.chat.completions.create(
-                model=self.deployment_name,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=max_tokens
-            )
-            
-            commented_code = response.choices[0].message.content.strip()
-            
-            # Loại bỏ markdown formatting nếu có
-            for lang in ["java", "python", "javascript", "cpp", "c", "csharp"]:
-                if commented_code.startswith(f"```{lang}"):
-                    commented_code = commented_code.replace(f"```{lang}", "").replace("```", "").strip()
-                    break
-            
-            if commented_code.startswith("```"):
-                commented_code = commented_code.replace("```", "").strip()
-            
-            return {
-                "success": True,
-                "commented_code": commented_code,
-                "original_length": len(code_content),
-                "commented_length": len(commented_code),
-                "tokens_info": {
-                    "estimated_input_tokens": input_tokens,
-                    "max_tokens_used": max_tokens,
-                    "estimated_output_tokens": self._estimate_tokens(commented_code)
-                }
-            }
-            
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Error processing code: {str(e)}"
-            }
-
-# Khởi tạo code commenter
-commenter = CodeCommenter()
-
-@app.route('/api/health', methods=['GET'])
-@swag_from({
-    'tags': ['health'],
-    'summary': 'Health Check',
-    'description': 'Check if the API is running and healthy',
-    'responses': {
-        200: {
-            'description': 'API is healthy',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'status': {'type': 'string', 'example': 'healthy'},
-                    'message': {'type': 'string', 'example': 'Code Commenter API is running'},
-                    'timestamp': {'type': 'string', 'example': '2025-07-26T10:30:00Z'},
-                    'version': {'type': 'string', 'example': '1.0.0'}
-                }
-            }
-        }
-    }
-})
-def health_check():
-    """Health check endpoint"""
-    from datetime import datetime
-    return jsonify({
-        "status": "healthy",
-        "message": "Code Commenter API is running",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
-        "version": "1.0.0"
-    })
-
-@app.route('/api/comment-code', methods=['POST'])
-@swag_from({
-    'tags': ['comment'],
-    'summary': 'Generate code comments',
-    'description': 'Generate AI-powered comments for source code using Azure OpenAI',
-    'parameters': [
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'code': {
-                        'type': 'string',
-                        'description': 'Source code to be commented',
-                        'example': 'public class HelloWorld {\n    public static void main(String[] args) {\n        System.out.println("Hello World");\n    }\n}'
-                    },
-                    'language': {
-                        'type': 'string',
-                        'description': 'Programming language of the code',
-                        'enum': ['java', 'python', 'javascript', 'cpp', 'c', 'csharp', 'go', 'rust'],
-                        'default': 'java',
-                        'example': 'java'
-                    }
-                },
-                'required': ['code']
-            }
-        }
-    ],
-    'responses': {
-        200: {
-            'description': 'Successfully generated comments',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean', 'example': True},
-                    'commented_code': {
-                        'type': 'string',
-                        'description': 'Code with AI-generated comments',
-                        'example': '/**\n * HelloWorld class - Main entry point\n */\npublic class HelloWorld {\n    /**\n     * Main method\n     * @param args Command line arguments\n     */\n    public static void main(String[] args) {\n        System.out.println("Hello World");\n    }\n}'
-                    },
-                    'original_length': {'type': 'integer', 'example': 120},
-                    'commented_length': {'type': 'integer', 'example': 280},
-                    'tokens_info': {
-                        'type': 'object',
-                        'properties': {
-                            'estimated_input_tokens': {'type': 'integer', 'example': 45},
-                            'max_tokens_used': {'type': 'integer', 'example': 200},
-                            'estimated_output_tokens': {'type': 'integer', 'example': 89}
-                        }
-                    }
-                }
-            }
-        },
-        400: {
-            'description': 'Bad request - Invalid input',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean', 'example': False},
-                    'error': {'type': 'string', 'example': 'No code content provided'}
-                }
-            }
-        },
-        500: {
-            'description': 'Internal server error',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean', 'example': False},
-                    'error': {'type': 'string', 'example': 'Azure OpenAI API error'}
-                }
-            }
-        }
-    }
-})
-def comment_code():
+def create_app():
     """
-    API endpoint để comment code
+    Application factory pattern để tạo Flask app
     
-    Expected JSON payload:
-    {
-        "code": "code content here",
-        "language": "java" (optional, defaults to "java")
-    }
+    Returns:
+        Flask app instance đã được cấu hình
     """
-    try:
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({
-                "success": False,
-                "error": "No JSON data provided"
-            }), 400
-        
-        code_content = data.get('code', '')
-        language = data.get('language', 'java')
-        
-        if not code_content.strip():
-            return jsonify({
-                "success": False,
-                "error": "No code content provided"
-            }), 400
-        
-        # Xử lý code
-        result = commenter.process_code(code_content, language)
-        
-        if result["success"]:
-            return jsonify(result), 200
-        else:
-            return jsonify(result), 500
-            
-    except Exception as e:
-        print(f"Error in comment_code endpoint: {e}")
-        print(traceback.format_exc())
-        return jsonify({
+    # Tạo Flask application
+    app = Flask(__name__)
+    
+    # Enable CORS cho tất cả routes
+    CORS(app)
+    
+    # Initialize Swagger documentation
+    swagger = Swagger(app, config=swagger_config, template=swagger_template)
+    
+    # Initialize AI Service
+    ai_service = AIService()
+    
+    # Initialize API modules với dependency injection
+    init_chat_api(ai_service)
+    init_health_api(ai_service)
+    
+    # Register API Blueprints với prefix /api
+    app.register_blueprint(chat_bp, url_prefix='/api')
+    app.register_blueprint(language_bp, url_prefix='/api')
+    app.register_blueprint(health_bp, url_prefix='/api')
+    
+    # Root endpoint để redirect đến Swagger UI
+    @app.route('/')
+    def root():
+        """
+        Root endpoint - redirect đến Swagger documentation
+        """
+        return {
+            "message": "AI Programming Assistant API v3.0.0",
+            "description": "Modular architecture với Chat, Language và Health APIs",
+            "documentation": "/swagger/",
+            "endpoints": {
+                "chat": "/api/chat",
+                "languages": "/api/languages",
+                "health": "/api/health"
+            }
+        }
+    
+    # Error handlers
+    @app.errorhandler(404)
+    def not_found(error):
+        """Handle 404 errors"""
+        return {
             "success": False,
-            "error": f"Internal server error: {str(e)}"
-        }), 500
+            "error": "Endpoint not found",
+            "message": "Check /swagger/ for available endpoints"
+        }, 404
+    
+    @app.errorhandler(500)
+    def internal_error(error):
+        """Handle 500 errors"""
+        return {
+            "success": False,
+            "error": "Internal server error",
+            "message": "Something went wrong on our end"
+        }, 500
+    
+    return app
 
-@app.route('/api/supported-languages', methods=['GET'])
-@swag_from({
-    'tags': ['comment'],
-    'summary': 'Get supported programming languages',
-    'description': 'Retrieve list of programming languages supported by the code commenter',
-    'responses': {
-        200: {
-            'description': 'List of supported languages',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'success': {'type': 'boolean', 'example': True},
-                    'languages': {
-                        'type': 'array',
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'value': {'type': 'string', 'example': 'java'},
-                                'label': {'type': 'string', 'example': 'Java'}
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-})
-def get_supported_languages():
-    """Lấy danh sách ngôn ngữ được hỗ trợ"""
-    languages = [
-        {"value": "java", "label": "Java"},
-        {"value": "python", "label": "Python"},
-        {"value": "javascript", "label": "JavaScript"},
-        {"value": "typescript", "label": "TypeScript"},
-        {"value": "cpp", "label": "C++"},
-        {"value": "c", "label": "C"},
-        {"value": "csharp", "label": "C#"},
-        {"value": "go", "label": "Go"},
-        {"value": "rust", "label": "Rust"}
-    ]
-    return jsonify({
-        "success": True,
-        "languages": languages
-    })
+# Tạo app instance
+app = create_app()
 
 if __name__ == '__main__':
-    print("Starting Code Commenter API...")
-    print("Make sure to set up your .env file with Azure OpenAI credentials")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    print("🚀 Starting AI Programming Assistant API v3.0.0...")
+    print("📊 Swagger Documentation: http://localhost:8888/swagger/")
+    print("💬 Chat API: http://localhost:8888/api/chat")
+    print("🌐 Languages API: http://localhost:8888/api/languages") 
+    print("💚 Health API: http://localhost:8888/api/health")
+    print("⚙️ Make sure to set up your .env file with Azure OpenAI credentials")
+    print("=" * 60)
+    
+    # Chạy development server
+    app.run(
+        debug=True,          # Enable debug mode cho development
+        host='0.0.0.0',      # Listen trên tất cả interfaces
+        port=8888            # Port 8888
+    )
