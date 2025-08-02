@@ -4,7 +4,7 @@
   position: fixed;
   top: 50px;
   right: 0;
-  width: 50%;
+  width: 40%;
   height: calc(100vh - 50px);
   background: #ffffff;
   border-left: 1px solid #e0e0e0;
@@ -577,13 +577,13 @@
 /* Responsive Design */
 @media (max-width: 1024px) {
   .chat-assistant {
-    width: 60%;
+    width: 50%;
   }
 }
 
 @media (max-width: 768px) {
   .chat-assistant {
-    width: 80%;
+    width: 70%;
   }
   
   .chat-title h3 {
@@ -598,7 +598,7 @@
 
 @media (max-width: 480px) {
   .chat-assistant {
-    width: 100%;
+    width: 90%;
   }
   
   .chat-header {
