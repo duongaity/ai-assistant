@@ -1,32 +1,32 @@
 """
 Cấu hình Swagger Documentation cho AI Programming Assistant API
 
-File này chứa tất cả các cấu hình cho Swagger UI và API documentation
-Giúp tách biệt config khỏi main application code
+File này chứa các thiết lập cho Swagger UI và tài liệu API
+Tách biệt cấu hình khỏi code ứng dụng chính
 """
 
-# Cấu hình Swagger UI và API documentation
+# Cấu hình Swagger UI và tài liệu API
 swagger_config = {
     "headers": [],
     "specs": [
         {
             "endpoint": 'apispec_1',
             "route": '/apispec_1.json',
-            "rule_filter": lambda rule: True,  # Include tất cả routes
-            "model_filter": lambda tag: True,  # Include tất cả models
+            "rule_filter": lambda rule: True,  # Bao gồm tất cả routes
+            "model_filter": lambda tag: True,  # Bao gồm tất cả models
         }
     ],
-    "static_url_path": "/flasgger_static",  # Path cho static files của Swagger
-    "swagger_ui": True,                     # Enable Swagger UI
-    "specs_route": "/swagger/"              # Route để access Swagger UI
+    "static_url_path": "/flasgger_static",  # Đường dẫn cho static files của Swagger
+    "swagger_ui": True,                     # Bật Swagger UI
+    "specs_route": "/swagger/"              # Route để truy cập Swagger UI
 }
 
-# Template chứa metadata của API với đường dẫn endpoints chi tiết
+# Template chứa thông tin metadata của API với chi tiết endpoints
 swagger_template = {
     "swagger": "2.0",
     "info": {
         "title": "AI Programming Assistant API",
-        "description": "AI-powered programming assistance API với chat, language support và health monitoring",
+        "description": "AI-powered programming assistance API with chat, language support and health monitoring",
         "version": "3.0.0",
         "contact": {
             "name": "AI Programming Assistant Team",
@@ -34,20 +34,20 @@ swagger_template = {
         }
     },
     "host": "localhost:8888",              # Host và port của API
-    "basePath": "/api",                    # Base path cho tất cả endpoints
-    "schemes": ["http", "https"],          # Supported protocols
+    "basePath": "/api",                    # Đường dẫn gốc cho tất cả endpoints
+    "schemes": ["http", "https"],          # Giao thức được hỗ trợ
     "tags": [
         {
             "name": "chat", 
-            "description": "🤖 AI Chat Operations - Giao tiếp với AI Assistant thông qua /api/chat"
+            "description": "🤖 AI Chat Operations - Chat with AI Assistant via /api/chat"
         },
         {
             "name": "language",
-            "description": "🌐 Language Support - Quản lý ngôn ngữ lập trình qua /api/languages"
+            "description": "🌐 Language Support - Programming language management via /api/languages"
         },
         {
             "name": "health",
-            "description": "💚 Health Check Operations - Monitoring trạng thái API qua /api/health"
+            "description": "💚 Health Check Operations - API status monitoring via /api/health"
         }
     ],
     "paths": {
@@ -55,28 +55,28 @@ swagger_template = {
             "post": {
                 "tags": ["chat"],
                 "summary": "Chat with AI Assistant",
-                "description": "Endpoint chính để chat với AI Assistant - hỗ trợ cả normal chat và quick actions"
+                "description": "Main endpoint for chatting with AI Assistant - supports both normal chat and quick actions"
             }
         },
         "/languages": {
             "get": {
                 "tags": ["language"],
                 "summary": "Get supported languages",
-                "description": "Lấy danh sách tất cả ngôn ngữ lập trình được hỗ trợ"
+                "description": "Get list of all supported programming languages"
             }
         },
         "/languages/{language_code}": {
             "get": {
                 "tags": ["language"],
                 "summary": "Get specific language info",
-                "description": "Lấy thông tin chi tiết về một ngôn ngữ lập trình cụ thể"
+                "description": "Get detailed information about a specific programming language"
             }
         },
         "/health": {
             "get": {
                 "tags": ["health"],
                 "summary": "Basic health check",
-                "description": "Kiểm tra trạng thái cơ bản của API server"
+                "description": "Check basic status of API server"
             }
         }
     }

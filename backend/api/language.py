@@ -1,15 +1,15 @@
 """
-Language API - Programming language endpoints
+Language API - Các endpoint liên quan đến ngôn ngữ lập trình
 
-Contains:
-- GET /api/languages: Get supported programming languages
-- Language validation and metadata
+Chứa:
+- GET /api/languages: Lấy danh sách ngôn ngữ lập trình được hỗ trợ
+- Xác thực ngôn ngữ và metadata
 """
 
 from flask import Blueprint, jsonify
 from flasgger import swag_from
 
-# Tạo Blueprint cho language API
+# Tạo Blueprint cho API ngôn ngữ
 language_bp = Blueprint('language', __name__)
 
 @language_bp.route('/languages', methods=['GET'])
@@ -60,15 +60,15 @@ language_bp = Blueprint('language', __name__)
 })
 def get_supported_languages():
     """
-    Get list of programming languages supported by AI Assistant
+    Lấy danh sách các ngôn ngữ lập trình được hỗ trợ bởi AI Assistant
     
     Returns:
-        JSON response with languages list, each language contains:
-        - value: Code for API calls
-        - label: Display name for UI
-        - description: Brief language description
+        JSON response chứa danh sách ngôn ngữ, mỗi ngôn ngữ bao gồm:
+        - value: Mã code để gọi API
+        - label: Tên hiển thị cho giao diện
+        - description: Mô tả ngắn gọn về ngôn ngữ
     """
-    # Danh sách ngôn ngữ được support với metadata đầy đủ
+    # Danh sách ngôn ngữ được hỗ trợ với metadata đầy đủ
     languages = [
         {
             "value": "java", 
@@ -175,15 +175,15 @@ def get_supported_languages():
 })
 def get_language_info(language_code):
     """
-    Get detailed information about a specific programming language
+    Lấy thông tin chi tiết về một ngôn ngữ lập trình cụ thể
     
     Args:
-        language_code (str): Language code to get information for
+        language_code (str): Mã ngôn ngữ cần lấy thông tin
         
     Returns:
-        JSON response with detailed language information
+        JSON response chứa thông tin chi tiết về ngôn ngữ
     """
-    # Mapping ngôn ngữ với thông tin chi tiết
+    # Ánh xạ ngôn ngữ với thông tin chi tiết
     language_details = {
         "java": {
             "value": "java",
@@ -241,7 +241,7 @@ def get_language_info(language_code):
         }
     }
     
-    # Tìm ngôn ngữ theo code
+    # Tìm kiếm ngôn ngữ theo mã code
     language_info = language_details.get(language_code.lower())
     
     if language_info:

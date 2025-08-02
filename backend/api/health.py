@@ -1,8 +1,8 @@
 """
-Health API - Xử lý endpoints liên quan đến health check và monitoring
+Health API - Xử lý các endpoints liên quan đến kiểm tra sức khỏe và giám sát hệ thống
 
 Module này chứa:
-- GET /api/health: Basic health check
+- GET /api/health: Kiểm tra sức khỏe cơ bản của hệ thống
 """
 
 from flask import Blueprint, jsonify
@@ -14,10 +14,10 @@ health_bp = Blueprint('health', __name__)
 
 def init_health_api(ai_service):
     """
-    Initialize health API với AI service dependency injection
+    Khởi tạo health API với dependency injection cho AI service
     
     Args:
-        ai_service: Instance của AIService để check AI service health
+        ai_service: Instance của AIService để kiểm tra tình trạng AI service
     """
     global _ai_service
     _ai_service = ai_service
@@ -26,32 +26,32 @@ def init_health_api(ai_service):
 @swag_from({
     'tags': ['health'],
     'summary': 'Basic Health Check',
-    'description': 'Kiểm tra trạng thái cơ bản của API server',
+    'description': 'Check the basic status of the API server',
     'responses': {
         200: {
-            'description': 'API đang hoạt động bình thường',
+            'description': 'API is running normally',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'status': {
                         'type': 'string', 
                         'example': 'healthy',
-                        'description': 'Trạng thái tổng quát của API'
+                        'description': 'Overall status of the API'
                     },
                     'message': {
                         'type': 'string', 
                         'example': 'AI Programming Assistant API is running',
-                        'description': 'Thông báo trạng thái'
+                        'description': 'Status message'
                     },
                     'timestamp': {
                         'type': 'string', 
                         'example': '2025-08-02T10:30:00Z',
-                        'description': 'Thời gian check health'
+                        'description': 'Health check timestamp'
                     },
                     'version': {
                         'type': 'string', 
                         'example': '3.0.0',
-                        'description': 'Version hiện tại của API'
+                        'description': 'Current API version'
                     }
                 }
             }
@@ -60,13 +60,13 @@ def init_health_api(ai_service):
 })
 def health_check():
     """
-    Basic health check endpoint - Kiểm tra API server có đang chạy không
+    Endpoint kiểm tra sức khỏe cơ bản - Kiểm tra xem API server có đang chạy không
     
     Endpoint này luôn trả về 200 nếu server đang chạy.
-    Được sử dụng bởi load balancer và monitoring tools.
+    Được sử dụng bởi load balancer và các công cụ giám sát.
     
     Returns:
-        JSON response với basic health information
+        JSON response chứa thông tin sức khỏe cơ bản
     """
     return jsonify({
         "status": "healthy",
