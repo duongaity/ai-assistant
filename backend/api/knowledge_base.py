@@ -839,12 +839,18 @@ Bạn có thể upload file PDF chứa thông tin bạn cần thông qua trang K
         context = "\n\n".join(context_parts)
         
         # Bước 5: Tạo prompt cho AI
-        ai_prompt = f"""Bạn là một AI Assistant thông minh và thân thiện. Hãy trả lời câu hỏi của người dùng dựa trên thông tin từ các tài liệu được cung cấp.
+        ai_prompt = f"""Bạn là một AI Assistant thông minh và thân thiện. Hãy trả lời câu hỏi của người dùng CHÍNH XÁC dựa trên thông tin từ các tài liệu được cung cấp.
 
 Câu hỏi: {message}
 
 Thông tin từ tài liệu:
 {context}
+
+**QUAN TRỌNG - QUY TẮC TRẢ LỜI:**
+- CHỈ trả lời dựa trên thông tin có trong các tài liệu được cung cấp ở trên
+- KHÔNG bịa đặt, suy đoán hoặc thêm thông tin không có trong tài liệu
+- Nếu thông tin không đủ hoặc không có trong tài liệu, hãy nói rõ "Thông tin này không có trong tài liệu được cung cấp"
+- Khi trích dẫn thông tin, hãy đề cập nguồn cụ thể (ví dụ: "Theo tài liệu X...")
 
 Hãy trả lời một cách tự nhiên, thân thiện và dễ hiểu. Sử dụng format markdown để trình bày đẹp mắt:
 - Sử dụng **in đậm** cho từ khóa quan trọng
@@ -853,7 +859,7 @@ Hãy trả lời một cách tự nhiên, thân thiện và dễ hiểu. Sử d�
 - Sử dụng bullet points (•) hoặc số thứ tự khi liệt kê
 - Thêm emoji phù hợp để làm sinh động (📝, 💡, ⚠️, ✅, etc.)
 
-Nếu thông tin không đủ để trả lời đầy đủ, hãy chia sẻ những gì bạn biết và đề xuất thêm thông tin nếu cần. Sử dụng tiếng Việt.
+Sử dụng tiếng Việt.
 
 Câu trả lời:"""
 
