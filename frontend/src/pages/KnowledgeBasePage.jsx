@@ -2,7 +2,11 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import MessageContent from '../components/MessageContent';
 import './KnowledgeBasePage.css';
+
+// Import highlight.js styles
+import 'highlight.js/styles/github.css';
 
 const API_BASE_URL = 'http://localhost:8888/api';
 
@@ -23,7 +27,7 @@ function KnowledgeBasePage({ onNavigate }) {
     {
       id: 1,
       type: 'bot',
-      content: 'hello hello'
+      content: 'Hello! I\'m your AI assistant. Upload documents and ask me anything about them.'
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
@@ -147,7 +151,7 @@ function KnowledgeBasePage({ onNavigate }) {
       if (allowedTypes.includes(file.type) || file.name.endsWith('.md')) {
         setUploadedFile(file);
       } else {
-        alert('Vui lòng chọn file PDF, Word, hoặc Markdown.');
+        alert('Please select PDF, Word, or Markdown files.');
         event.target.value = ''; // Reset input
       }
     }
@@ -174,7 +178,7 @@ function KnowledgeBasePage({ onNavigate }) {
         const newMessage = {
           id: Date.now(),
           type: 'bot',
-          content: `Tuyệt vời! Tôi đã nhận được file "${uploadedFile.name}" với ID: ${response.data.file_id}. Bạn có thể hỏi tôi về nội dung của file này.`
+          content: `Great! I've received the file "${uploadedFile.name}" with ID: ${response.data.file_id}. You can now ask me about the content of this file.`
         };
         setMessages(prev => [...prev, newMessage]);
         
@@ -183,11 +187,11 @@ function KnowledgeBasePage({ onNavigate }) {
         document.getElementById('file-upload').value = '';
         loadAvailableFiles();
       } else {
-        alert('Lỗi upload: ' + response.data.error);
+        alert('Upload error: ' + response.data.error);
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Lỗi khi upload file: ' + (error.response?.data?.error || error.message));
+      alert('File upload error: ' + (error.response?.data?.error || error.message));
     } finally {
       setUploading(false);
     }
@@ -243,7 +247,7 @@ function KnowledgeBasePage({ onNavigate }) {
         const errorMessage = {
           id: Date.now() + 1,
           type: 'bot',
-          content: `Lỗi: ${response.data.error}`
+          content: `Error: ${response.data.error}`
         };
         setMessages(prev => [...prev, errorMessage]);
       }
@@ -252,7 +256,7 @@ function KnowledgeBasePage({ onNavigate }) {
       const errorMessage = {
         id: Date.now() + 1,
         type: 'bot',
-        content: `Lỗi kết nối: ${error.response?.data?.error || error.message}`
+        content: `Connection error: ${error.response?.data?.error || error.message}`
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -277,7 +281,7 @@ function KnowledgeBasePage({ onNavigate }) {
           <div className="left-panel">
             {/* File Upload Section */}
             <div className="file-upload-section">
-              <h3>📁 Upload Tài Liệu</h3>
+              <h3>📁 Upload Documents</h3>
               <div className="file-upload-container">
                 <div className="file-selection">
                   <input
@@ -288,10 +292,10 @@ function KnowledgeBasePage({ onNavigate }) {
                     style={{ display: 'none' }}
                   />
                   <label htmlFor="file-upload" className="choose-file-button">
-                    {uploading ? 'Đang upload...' : 'Chọn File'}
+                    {uploading ? 'Uploading...' : 'Choose File'}
                   </label>
                   <div className="file-display">
-                    {uploadedFile ? uploadedFile.name : 'Chưa chọn file nào'}
+                    {uploadedFile ? uploadedFile.name : 'No file selected'}
                   </div>
                   {uploadedFile && (
                     <button 
@@ -299,7 +303,7 @@ function KnowledgeBasePage({ onNavigate }) {
                       onClick={handleUploadClick}
                       disabled={uploading}
                     >
-                      {uploading ? 'Đang upload...' : 'Upload'}
+                      {uploading ? 'Uploading...' : 'Upload'}
                     </button>
                   )}
                 </div>
@@ -308,7 +312,7 @@ function KnowledgeBasePage({ onNavigate }) {
 
             {/* File List Section */}
             <div className="file-list-section">
-              <h3>📚 Danh Sách Tài Liệu ({availableFiles?.length || 0})</h3>
+              <h3>📚 Document List ({availableFiles?.length || 0})</h3>
               {availableFiles && availableFiles.length > 0 ? (
                 <div className="file-list">
                   <div className="select-all-controls">
@@ -316,13 +320,13 @@ function KnowledgeBasePage({ onNavigate }) {
                       className="select-button"
                       onClick={() => setSelectedFiles(availableFiles?.map(file => file.file_id) || [])}
                     >
-                      Chọn tất cả
+                      Select All
                     </button>
                     <button 
                       className="select-button"
                       onClick={() => setSelectedFiles([])}
                     >
-                      Bỏ chọn tất cả
+                      Deselect All
                     </button>
                   </div>
                   
@@ -346,7 +350,7 @@ function KnowledgeBasePage({ onNavigate }) {
                           <div className="file-title">{file.filename}</div>
                           <div className="file-uuid">ID: {file.file_id}</div>
                           <div className="file-upload-time">
-                            📅 {new Date(file.upload_time).toLocaleString('vi-VN')}
+                            📅 {new Date(file.upload_time).toLocaleString('en-US')}
                           </div>
                         </div>
                       </div>
@@ -355,7 +359,7 @@ function KnowledgeBasePage({ onNavigate }) {
                 </div>
               ) : (
                 <div className="no-files">
-                  <p>Chưa có tài liệu nào. Hãy upload file để bắt đầu!</p>
+                  <p>No documents yet. Upload files to get started!</p>
                 </div>
               )}
             </div>
@@ -368,9 +372,9 @@ function KnowledgeBasePage({ onNavigate }) {
                 <h3>💬 AI Assistant</h3>
                 <div className="chat-info">
                   {selectedFiles.length > 0 ? (
-                    <span>Đang chat với {selectedFiles.length} tài liệu được chọn</span>
+                    <span>Chatting with {selectedFiles.length} selected document(s)</span>
                   ) : (
-                    <span>Đang chat với tất cả tài liệu</span>
+                    <span>Chatting with all documents</span>
                   )}
                 </div>
               </div>
@@ -380,15 +384,17 @@ function KnowledgeBasePage({ onNavigate }) {
                   {messages.map((message, index) => (
                     <div key={message.id} className={`message ${message.type}`}>
                       <div className="message-content">
-                        {message.content}
+                        <MessageContent content={message.content} type={message.type} />
                         {message.type === 'bot' && (
-                          <button
-                            className="tts-btn"
-                            onClick={() => handlePlayTTS(message.content, index)}
-                            style={{ marginLeft: '10px' }}
-                          >
-                            {audioPlayingIndex === index ? '⏸️ Pause' : '🔊 Play'}
-                          </button>
+                          <div className="message-actions">
+                            <button
+                              className="tts-btn"
+                              onClick={() => handlePlayTTS(message.content, index)}
+                              title="Play audio"
+                            >
+                              {audioPlayingIndex === index ? '⏸️' : '🔊'}
+                            </button>
+                          </div>
                         )}
                         {message.sources && message.sources.length > 0 && (
                           <div className="message-sources">
@@ -428,7 +434,7 @@ function KnowledgeBasePage({ onNavigate }) {
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="Hỏi về tài liệu của bạn..."
+                      placeholder="Ask about your documents..."
                       rows="3"
                       disabled={isLoading}
                     />

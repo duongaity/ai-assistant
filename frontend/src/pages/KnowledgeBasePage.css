@@ -412,22 +412,28 @@
 .message {
   display: flex;
   max-width: 85%;
+  margin-bottom: 0.75rem;
 }
 
 .message.user {
   align-self: flex-end;
+  justify-content: flex-end;
 }
 
 .message.bot {
   align-self: flex-start;
+  justify-content: flex-start;
 }
 
 .message-content {
   background: #f8f9fa;
-  padding: 1rem 1.25rem;
+  padding: 1.25rem 1.5rem;
   border-radius: 12px;
   line-height: 1.5;
   word-wrap: break-word;
+  position: relative;
+  text-align: left;
+  max-width: 100%;
 }
 
 .message.user .message-content {
@@ -438,6 +444,37 @@
 .message.bot .message-content {
   background: #e9ecef;
   color: #333;
+}
+
+.message-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.tts-btn {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.message.bot .tts-btn {
+  color: #495057;
+  border-color: #adb5bd;
+}
+
+.message.bot .tts-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: #6c757d;
 }
 
 .message-sources {
@@ -903,6 +940,16 @@
   .message-content {
     max-width: 90%;
   }
+  
+  .tts-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .message-actions {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+  }
 }
 
 /* File Selection Section */
@@ -961,7 +1008,7 @@
   padding: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 2px solid transparent;
+  border: 2px solid #dee2e6;
   display: flex;
   justify-content: space-between;
   align-items: center;
