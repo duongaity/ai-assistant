@@ -42,6 +42,18 @@ AI Programming Assistant là một ứng dụng full-stack giúp lập trình vi
 - **Technical discussions**: Thảo luận về algorithms, data structures, performance
 - **Project consultation**: Tư vấn về công nghệ, tools, và workflow phù hợp
 
+### 🔊 Text-to-Speech (TTS)
+- **Voice synthesis**: Chuyển đổi text thành giọng nói
+- **Multiple language support**: Hỗ trợ đọc text bằng nhiều ngôn ngữ
+- **Audio streaming**: Trả về audio dưới dạng base64 encoding
+- **Real-time processing**: Xử lý TTS nhanh chóng và hiệu quả
+
+### 📚 Knowledge Base
+- **Document upload**: Upload và xử lý file PDF
+- **Smart search**: Tìm kiếm thông tin trong knowledge base
+- **Content extraction**: Trích xuất và lưu trữ nội dung từ documents
+- **Vector database**: Sử dụng ChromaDB để tìm kiếm semantic
+
 ## 🏗️ Structure
 
 ```
@@ -108,6 +120,10 @@ npm run dev
 **Tech Stack:**
 - **Flask**: Web framework
 - **Azure OpenAI**: AI integration
+- **pyttsx3**: Text-to-Speech engine
+- **ChromaDB**: Vector database
+- **PyPDF2**: PDF processing
+- **Sentence Transformers**: Text embeddings
 - **Flasgger**: Swagger documentation
 - **Flask-CORS**: Cross-origin support
 
@@ -115,11 +131,17 @@ npm run dev
 - `POST /api/chat` - Chat với AI Assistant
 - `GET /api/languages` - Danh sách ngôn ngữ hỗ trợ
 - `GET /api/health` - Health check
+- `POST /api/tts` - Text-to-Speech conversion
+- `POST /api/knowledge-base/upload` - Upload PDF documents
+- `POST /api/knowledge-base/search` - Search knowledge base
 
 **Key Features:**
 - AI chat với context management
 - Quick actions (comment, debug, optimize)
 - Multi-language programming support
+- Text-to-Speech functionality
+- Knowledge base with PDF upload
+- Vector search với ChromaDB
 - Swagger API documentation
 - Error handling và logging
 
@@ -131,6 +153,61 @@ npm run dev
 - **CSS Modules**: Styling
 - **Axios**: HTTP client
 
+## 🔧 Troubleshooting
+
+### TTS (Text-to-Speech) Issues
+If you encounter errors like "Error opening input file temp.wav" or "Invalid data found when processing input":
+
+**macOS:**
+```bash
+# Install espeak (required for pyttsx3)
+brew install espeak
+
+# Or install festival
+brew install festival
+
+# Check if TTS engine is working
+python3 -c "import pyttsx3; engine = pyttsx3.init(); engine.say('test'); engine.runAndWait()"
+```
+
+**Ubuntu/Debian:**
+```bash
+# Install espeak
+sudo apt-get install espeak espeak-data
+
+# Install festival (alternative)
+sudo apt-get install festival festvox-kallpc16k
+```
+
+**Windows:**
+```bash
+# Windows có SAPI built-in, nên thường không cần cài thêm
+# Nếu vẫn lỗi, thử install Microsoft Speech Platform
+```
+
+### Knowledge Base Issues
+```bash
+# If ChromaDB issues occur, reset the database
+rm -rf backend/chroma_db/*
+
+# Restart the application to recreate the database
+```
+
+### Environment Setup Issues
+```bash
+# Make sure all environment variables are set
+cp backend/.env.example backend/.env
+# Edit .env file with your Azure OpenAI credentials
+
+# Check Python version (requires Python 3.8+)
+python3 --version
+
+# Install dependencies
+cd backend
+pip install -r requirements.txt
+```
+
 ---
 
 **Happy Coding! 🚀**
+

@@ -1,0 +1,118 @@
+Quy Tc Chun Code Java (Coding Conventions)
+X-Eyes
+Ngịy to: 09/09/2025
+Ghi chữ : Tịi liu s dng ni b
+Mục lục
+1 Gii thiu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+2 Tm quan trng ca Coding Conventions . . . . . . . . . . . . . . . . . . . . . . . . 2
+3 Quy tc nh dng mõ ngun . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+3.1 Tht u dùng (Indentation) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+3.2 Khong trng (White Space) . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+3.3 Ngoc nhn vị ngoc trùn . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+4 Quy tc t tổn . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+4.1 Naming Conventions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+4.2 Lu ỳ khi t tổn . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+5 Quy tc bơnh lun (Comment) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+6 Vit phng thc hiu qu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+7 S dng bin vị th vin . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+8 Tham kho . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+1
+1 Gii thiu
+Tiổu chun vit code (Coding Conventions) lị tp hp còc quy tc giữp lp trơnh viổn vit mõ ngun
+Java thng nht, d c, d bo trơ. Tịi liu nịy cung cp còc hng dn c bn v còch vit code Java theo chun,
+phứ hp vi còc d òn phòt trin phn mm.
+2 Tm quan trng ca Coding Conventions
+•D bo trơ : Code theo chun giữp tơm vị sa li nhanh hn.
+•Hp tòc nhúm : m bo tờnh nht quòn gia còc thịnh viổn.
+•Tng kh nng c : Mõ ngun rủ rịng, d hiu cho ngi khòc.
+•Tòi s dng : Code d hiu giữp tòi s dng hiu qu hn.
+3 Quy tc nh dng mõ ngun
+3.1 Tht u dùng (Indentation)
+•S dng 1 tab hoc 4 khong trng cho mi cp tht u dùng.
+•Còc dùng code liổn quan còch nhau 1 n v tht u dùng.
+Vờ d:
+1public class Example {
+2 public void printMessage() {
+3 System.out.println( "Xin chịo !");
+4 }
+5}
+3.2 Khong trng (White Space)
+•Thổm khong trng sau du phy, du chm phy vị xung quanh toòn t.
+•Còc khi code liổn quan khũng cú dùng trng; còc khi khòc nhau còch nhau ờt nht 1 dùng
+trng.
+Vờ d:
+1int sum = a + b; //Khong trng quanh toòn t
+2for (int i = 0; i < 10; i++) {
+3 //Code block
+4}
+2
+3.3 Ngoc nhn vị ngoc trùn
+•Du{t cứng dùng vi cóu lnh if,for,while .
+•S dng ngoc trùn ()lịm rủ th t thc thi biu thc.
+Vờ d:
+1if(condition) {
+2 System.out.println( "ững");
+3}
+4int result = (a + b) * c; //Ngoc trùn lịm rủ
+4 Quy tc t tổn
+4.1 Naming Conventions
+•Class, Interface : S dng PascalCase, vờ d: StudentManager ,FileReader .
+•Phng thc, Bin : S dng camelCase, vờ d: calculateAverage ,studentName .
+•Hng s, Enum : Vit hoa, phón còch bi du gch di, vờ d: MAX VALUE, PI.Package :Chthng, phncchbiduchm, vd :
+com.example.util .Vờ d:
+1public class StudentManager {
+2 private static final int MAX_STUDENTS = 100;
+3 private String studentName;
+4
+5 public void calculateAverage() {
+6 //Code here
+7 }
+8}
+4.2 Lu ỳ khi t tổn
+••Trònh vit tt góy khú hiu, vờ d: address thay vơ addr .
+•Tổn phi mang tờnh gi nh, th hin rủ chc nng.
+•Khũng s dng s phón bit, vờ d: calculate1 ,calculate2 .
+5 Quy tc bơnh lun (Comment)
+•Bơnh lun ngn gn, cung cp thũng tin b sung, khũng lp li code.
+•Ch bơnh lun khi code phc tp, cn gii thờch.
+•Canh l còc bơnh lun liổn tip cho thng nht.
+Vờ d:
+3
+1//Tờnh tng còc phn ttrong mng
+2public int sumArray( int[] numbers) {
+3 int sum = 0;
+4 for (int num : numbers) {
+5 sum += num; //Cng tng phn t
+6 }
+7 return sum;
+8}
+6 Vit phng thc hiu qu
+•Mi phng thc ch thc hin mt chc nng.
+•dịi phng thc lỳ tng: 50150 dùng (theo Steve McConnell, Code Complete).
+•Tòch còc on code phc tp thịnh phng thc riổng.
+•Trònh khai bòo tham s khũng s dng.
+Vờ d:
+1public void processData() {
+2 int result = calculateSum(); //Tòch logic phc tp
+3 displayResult(result);
+4}
+7 S dng bin vị th vin
+•Trònh khai bòo bin khũng s dng.
+•Khũng lng còc cóu lnh if,for,while quò 3 cp.
+•Ch import th vin cn thit, vờ d: import java.util.List thay vơ import java.util.* .
+Vờ d:
+1import java.util.List;
+2
+3public class Example {
+4 public void processList(List<String> names) {
+5 if(!names.isEmpty()) {
+6 //Xlỳdanh sòch
+7 }
+8 }
+9}
+4
+8 Tham kho
+•Google Java Style Guide
+•Oracle Java Coding Conventions
+•Code Complete, Second Edition Steve McConnell
+5
