@@ -3,8 +3,9 @@ import axios from 'axios';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ChatAssistant from './components/ChatAssistant';
-import HowToUse from './components/HowToUse';
 import CodeEditor from './components/CodeEditor';
+import HomePage from './pages/HomePage';
+import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import './App.css';
 
 const API_BASE_URL = 'http://localhost:8888/api';
@@ -19,6 +20,14 @@ function App() {
   const [supportedLanguages, setSupportedLanguages] = useState([]);
   const [fileInputRef, setFileInputRef] = useState(null);
   const [chatVisible, setChatVisible] = useState(false);
+  const [currentPage, setCurrentPage] = useState(() => {
+    // Check URL path to determine initial page
+    const path = window.location.pathname;
+    if (path === '/knowledge-base') {
+      return 'knowledge-base';
+    }
+    return 'home';
+  }); // Add page state
 
   useEffect(() => {
     // Fetch supported languages - Lấy danh sách ngôn ngữ được hỗ trợ
@@ -172,170 +181,71 @@ function App() {
   const handleOptimize = () => handleQuickAction('optimize', 'Optimize the performance of this code:');
   const handleGenerateTests = () => handleQuickAction('test', 'Generate unit tests for this code:');
 
+  // Navigation handlers
+  const navigateToHome = () => {
+    setCurrentPage('home');
+    window.history.pushState(null, '', '/');
+  };
+  const navigateToKnowledgeBase = () => {
+    setCurrentPage('knowledge-base');
+    window.history.pushState(null, '', '/knowledge-base');
+  };
+  const handleNavigate = (page) => {
+    if (page === 'home') {
+      navigateToHome();
+    } else if (page === 'knowledge-base') {
+      navigateToKnowledgeBase();
+    }
+  };
+
+  // Handle browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/knowledge-base') {
+        setCurrentPage('knowledge-base');
+      } else {
+        setCurrentPage('home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Render different pages based on currentPage
+  const renderContent = () => {
+    if (currentPage === 'knowledge-base') {
+      return <KnowledgeBasePage onNavigate={handleNavigate} />;
+    }
+
+    // Default home page content
+    return (
+      <HomePage
+        onNavigate={handleNavigate}
+        language={language}
+        supportedLanguages={supportedLanguages}
+        onLanguageChange={handleLanguageChange}
+        onFileUpload={handleFileUpload}
+        fileInputRef={fileInputRef}
+        onClearAll={handleClearAll}
+        onCommentCode={handleCommentCode}
+        onFindBugs={handleFindBugs}
+        onOptimize={handleOptimize}
+        onGenerateTests={handleGenerateTests}
+        loading={loading}
+        code={code}
+        setCode={setCode}
+        error={error}
+        commentedCode={commentedCode}
+        tokensInfo={tokensInfo}
+      />
+    );
+  };
+
   return (
     <div className="App">
-      <header className="app-header">
-        <h1>🤖 AI Programming Assistant</h1>
-        <p>Smart programming support with AI - Comment code, Debug, Optimize & More</p>
-      </header>
-
-      <main className="app-main">
-        <div className="controls">
-          <div className="controls-left">
-            <div className="language-selector">
-              <label htmlFor="language">Programming Language:</label>
-              <select
-                id="language"
-                value={language}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-              >
-                {supportedLanguages.map((lang) => (
-                  <option key={lang.value} value={lang.value}>
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="action-buttons">
-              <input
-                type="file"
-                ref={(ref) => setFileInputRef(ref)}
-                onChange={handleFileUpload}
-                accept=".txt,.js,.jsx,.ts,.tsx,.py,.java,.cpp,.c,.cs,.php,.rb,.go,.rs,.swift,.kt,.scala,.clj,.sh,.sql,.html,.css,.json,.xml,.yaml,.yml"
-                style={{ display: 'none' }}
-              />
-              <button
-                onClick={triggerFileUpload}
-                className="btn btn-secondary"
-              >
-                📁 Upload File
-              </button>
-              <button
-                onClick={handleClearAll}
-                className="btn btn-secondary"
-              >
-                🗑️ Clear All
-              </button>
-            </div>
-          </div>
-
-          <div className="controls-right">
-            {/* Quick Actions */}
-            <div className="quick-actions">
-              <div className="quick-action-buttons">
-                <button
-                  onClick={handleCommentCode}
-                  className="btn btn-quick-action"
-                  disabled={loading || !code.trim()}
-                  title="Add detailed comments to code"
-                >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>💬</span>
-                  Comment Code
-                </button>
-                <button
-                  onClick={handleFindBugs}
-                  className="btn btn-quick-action"
-                  disabled={loading || !code.trim()}
-                  title="Find and fix bugs in code"
-                >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>🐛</span>
-                  Find Bugs
-                </button>
-                <button
-                  onClick={handleOptimize}
-                  className="btn btn-quick-action"
-                  disabled={loading || !code.trim()}
-                  title="Optimize code performance"
-                >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>⚡</span>
-                  Optimize
-                </button>
-                <button
-                  onClick={handleGenerateTests}
-                  className="btn btn-quick-action"
-                  disabled={loading || !code.trim()}
-                  title="Generate unit tests for code"
-                >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>🧪</span>
-                  Generate Tests
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {error && (
-          <div className="error-message">
-            ❌ {error}
-          </div>
-        )}
-
-        <div className="code-sections">
-          <div className="code-section">
-            <h3>📥 Input</h3>
-            <CodeEditor
-              value={code}
-              onChange={setCode}
-              language={language}
-              placeholder={`Enter or paste ${language} code here...`}
-              rows={15}
-            />
-          </div>
-
-          <div className="code-section">
-            <h3>📤 Output</h3>
-            {loading ? (
-              <div className="loading-container">
-                <div className="loading-spinner"></div>
-                <p>Processing code with AI...</p>
-              </div>
-            ) : commentedCode ? (
-              <div className="code-output">
-                <SyntaxHighlighter
-                  language={language}
-                  style={tomorrow}
-                  showLineNumbers={true}
-                  wrapLines={true}
-                >
-                  {commentedCode}
-                </SyntaxHighlighter>
-              </div>
-            ) : (
-              <div className="placeholder">
-                AI Assistant output will be displayed here...
-              </div>
-            )}
-          </div>
-        </div>
-
-        {commentedCode && (
-          <div className="stats">
-            {tokensInfo && (
-              <div className="stats-row">
-                <p>
-                  📊 <strong>Tokens:</strong> 
-                  Input ~{tokensInfo.estimated_input_tokens} tokens | 
-                  Max allowed: {tokensInfo.max_tokens_used} tokens | 
-                  Output ~{tokensInfo.estimated_output_tokens} tokens
-                </p>
-                <p className="cost-estimate">
-                  💰 <strong>Cost estimate:</strong> 
-                  ~${((tokensInfo.estimated_input_tokens * 0.00015 + tokensInfo.estimated_output_tokens * 0.0006) / 1000).toFixed(4)} USD
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-
-      <HowToUse />
-
-      <footer className="app-footer">
-        <p>
-          © 2025 <strong>[AI-Elevate] X-Eyes Team</strong> - All rights reserved
-        </p>
-      </footer>
+      {renderContent()}
 
       {/* Floating Chat Button */}
       <button
