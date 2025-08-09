@@ -2,8 +2,7 @@
 Chat API - Xử lý tất cả các endpoint liên quan đến trò chuyện với AI Assistant
 
 Module này chứa:
-- POST /api/chat: Trò chuyện với AI Assistant (yêu cầu đơn lẻ)
-- Hỗ trợ cả trò chuyện thông thường (normal chat) và các hành động nhanh (quick action)
+- POST /api/chat: Trò chuyện với AI Assistant
 """
 
 from flask import Blueprint, request, jsonify

@@ -56,7 +56,7 @@ function HomePage({
                 style={{ display: 'none' }}
               />
               <button
-                onClick={() => fileInputRef && fileInputRef.click()}
+                onClick={() => fileInputRef && fileInputRef.current && fileInputRef.current.click()}
                 className="btn btn-secondary"
               >
                 📁 Upload File

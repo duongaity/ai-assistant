@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -18,7 +18,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [supportedLanguages, setSupportedLanguages] = useState([]);
-  const [fileInputRef, setFileInputRef] = useState(null);
+  const fileInputRef = useRef(null);
   const [chatVisible, setChatVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => {
     // Check URL path to determine initial page

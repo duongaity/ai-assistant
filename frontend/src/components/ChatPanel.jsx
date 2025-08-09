@@ -127,7 +127,7 @@ function ChatPanel({ selectedFiles = [] }) {
       // Prepare chat request
       const chatData = {
         message: currentInput,
-        max_results: 50
+        max_results: 5
       };
 
       // Add selected files if any

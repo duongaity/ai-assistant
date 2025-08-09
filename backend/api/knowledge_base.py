@@ -6,7 +6,7 @@ Module này chứa:
 - GET /api/knowledge-base/files: Lấy danh sách file đã upload
 - POST /api/knowledge-base/search: Tìm kiếm trong files cụ thể dựa trên list filename_uuid
 - GET /api/knowledge-base/chunks: Lấy tất cả chunks từ ChromaDB
-- POST /api/knowledge-base/reset: Reset ChromaDB - xóa tất cả chunks và tạo lại collection
+- POST /api/knowledge-base/reset: Xóa tất cả chunks và tạo lại collection
 - POST /api/knowledge-base/clear: Xóa tất cả chunks nhưng giữ nguyên collection
 """
 
@@ -858,8 +858,6 @@ Hãy trả lời một cách tự nhiên, thân thiện và dễ hiểu. Sử d�
 - Chia thành các đoạn ngắn, dễ đọc
 - Sử dụng bullet points (•) hoặc số thứ tự khi liệt kê
 - Thêm emoji phù hợp để làm sinh động (📝, 💡, ⚠️, ✅, etc.)
-
-Sử dụng tiếng Việt.
 
 Câu trả lời:"""
 
