@@ -247,23 +247,27 @@ function App() {
     <div className="App">
       {renderContent()}
 
-      {/* Floating Chat Button */}
-      <button
-        onClick={toggleChat}
-        className={`floating-chat-btn ${chatVisible ? 'active' : ''}`}
-        title={chatVisible ? "Close AI Assistant" : "Open AI Assistant"}
-      >
-        {chatVisible ? '✕' : '🤖'}
-      </button>
+      {/* Floating Chat Button - Only show on home page */}
+      {currentPage === 'home' && (
+        <button
+          onClick={toggleChat}
+          className={`floating-chat-btn ${chatVisible ? 'active' : ''}`}
+          title={chatVisible ? "Close AI Assistant" : "Open AI Assistant"}
+        >
+          {chatVisible ? '✕' : '🤖'}
+        </button>
+      )}
 
-      {/* Chat Assistant Sidebar */}
-      <ChatAssistant 
-        isVisible={chatVisible} 
-        onToggle={toggleChat}
-        currentCode={code}
-        currentLanguage={language}
-        onChatResult={handleChatResult}
-      />
+      {/* Chat Assistant Sidebar - Only show on home page */}
+      {currentPage === 'home' && (
+        <ChatAssistant 
+          isVisible={chatVisible} 
+          onToggle={toggleChat}
+          currentCode={code}
+          currentLanguage={language}
+          onChatResult={handleChatResult}
+        />
+      )}
     </div>
   );
 }

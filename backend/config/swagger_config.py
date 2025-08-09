@@ -48,6 +48,14 @@ swagger_template = {
         {
             "name": "health",
             "description": "💚 Health Check Operations - API status monitoring via /api/health"
+        },
+        {
+            "name": "knowledge-base",
+            "description": "📚 Knowledge Base Operations - Upload and manage PDF documents via /api/knowledge-base"
+        },
+        {
+            "name": "tts",
+            "description": "🔊 Text-to-Speech Operations - Convert text to audio via /api/tts"
         }
     ],
     "paths": {
@@ -77,6 +85,62 @@ swagger_template = {
                 "tags": ["health"],
                 "summary": "Basic health check",
                 "description": "Check basic status of API server"
+            }
+        },
+        "/knowledge-base/upload": {
+            "post": {
+                "tags": ["knowledge-base"],
+                "summary": "Upload PDF file",
+                "description": "Upload a PDF file to build knowledge base for AI Assistant"
+            }
+        },
+        "/knowledge-base/files": {
+            "get": {
+                "tags": ["knowledge-base"],
+                "summary": "List uploaded files",
+                "description": "Get list of all uploaded PDF files in knowledge base"
+            }
+        },
+        "/knowledge-base/search": {
+            "post": {
+                "tags": ["knowledge-base"],
+                "summary": "Search knowledge base",
+                "description": "Search for relevant content using vector similarity"
+            }
+        },
+        "/knowledge-base/chunks": {
+            "get": {
+                "tags": ["knowledge-base"],
+                "summary": "Get all chunks",
+                "description": "Get all text chunks from ChromaDB"
+            }
+        },
+        "/knowledge-base/reset": {
+            "post": {
+                "tags": ["knowledge-base"],
+                "summary": "Reset ChromaDB",
+                "description": "Reset ChromaDB - Delete all chunks and recreate collection"
+            }
+        },
+        "/knowledge-base/clear": {
+            "post": {
+                "tags": ["knowledge-base"],
+                "summary": "Clear all chunks",
+                "description": "Clear all chunks from ChromaDB but keep collection"
+            }
+        },
+        "/knowledge-base/chat": {
+            "post": {
+                "tags": ["knowledge-base"],
+                "summary": "Chat with Knowledge Base",
+                "description": "Chat with AI Assistant using vector database as knowledge source"
+            }
+        },
+        "/tts": {
+            "post": {
+                "tags": ["tts"],
+                "summary": "Convert text to speech",
+                "description": "Convert text input to audio output in base64 format"
             }
         }
     }

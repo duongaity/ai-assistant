@@ -25,6 +25,8 @@ from services.ai_service import AIService
 from api.chat import chat_bp, init_chat_api
 from api.language import language_bp
 from api.health import health_bp, init_health_api
+from api.knowledge_base import knowledge_base_bp, init_knowledge_base_api
+from api.tts import tts_bp
 
 # Load environment variables
 load_dotenv()
@@ -51,11 +53,14 @@ def create_app():
     # Initialize API modules với dependency injection
     init_chat_api(ai_service)
     init_health_api(ai_service)
+    init_knowledge_base_api()
     
     # Register API Blueprints với prefix /api
     app.register_blueprint(chat_bp, url_prefix='/api')
     app.register_blueprint(language_bp, url_prefix='/api')
     app.register_blueprint(health_bp, url_prefix='/api')
+    app.register_blueprint(knowledge_base_bp, url_prefix='/api')
+    app.register_blueprint(tts_bp, url_prefix='/api')
     
     # Root endpoint để redirect đến Swagger UI
     @app.route('/')
@@ -70,7 +75,9 @@ def create_app():
             "endpoints": {
                 "chat": "/api/chat",
                 "languages": "/api/languages",
-                "health": "/api/health"
+                "health": "/api/health",
+                "knowledge-base": "/api/knowledge-base",
+                "tts": "/api/tts"
             }
         }
     
@@ -104,6 +111,8 @@ if __name__ == '__main__':
     print("💬 Chat API: http://localhost:8888/api/chat")
     print("🌐 Languages API: http://localhost:8888/api/languages") 
     print("💚 Health API: http://localhost:8888/api/health")
+    print("📚 Knowledge Base API: http://localhost:8888/api/knowledge-base")
+    print("🔊 TTS API: http://localhost:8888/api/tts")
     print("⚙️ Make sure to set up your .env file with Azure OpenAI credentials")
     print("=" * 60)
     
