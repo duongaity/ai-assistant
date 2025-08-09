@@ -1,0 +1,119 @@
+/* DocumentList.css */
+.file-list-section {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #dee2e6;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.file-list-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.select-all-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.select-button {
+  padding: 6px 12px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.3s ease;
+}
+
+.select-button:hover {
+  background: #5a6268;
+}
+
+.files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.file-item:hover {
+  border-color: #007bff;
+  background: #e3f2fd;
+}
+
+.file-item.selected {
+  border-color: #007bff;
+  background: #e3f2fd;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+}
+
+.file-checkbox {
+  margin-right: 12px;
+  margin-top: 2px;
+  position: relative;
+}
+
+.file-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-title {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.file-uuid {
+  font-size: 0.8rem;
+  color: #666;
+  font-family: monospace;
+  margin-bottom: 4px;
+}
+
+.file-upload-time {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.no-files {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.no-files p {
+  margin: 0;
+  font-style: italic;
+}

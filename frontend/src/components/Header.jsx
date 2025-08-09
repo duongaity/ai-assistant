@@ -6,12 +6,12 @@ function Header({ currentPage, onNavigate }) {
     if (currentPage === 'knowledge-base') {
       return {
         title: '📚 Knowledge Base',
-        subtitle: 'Learn and explore programming concepts with AI assistance'
+        subtitle: 'A knowledge base is a centralized hub where teams can quickly find answers, troubleshoot issues, and access resources.'
       };
     }
     return {
       title: '🤖 AI Programming Assistant',
-      subtitle: 'Smart programming support with AI - Comment code, Debug, Optimize & More'
+      subtitle: 'AI-powered programming support enhances this by automating code commenting, debugging, optimization and more.'
     };
   };
 

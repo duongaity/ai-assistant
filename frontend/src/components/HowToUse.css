@@ -1,9 +1,9 @@
 .how-to-use {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-  padding: 2rem 2rem;
+  padding: 2rem;
   margin: 2rem;
-  margin-top: 0px !important;
-  border-radius: 20px;
+  margin-top: 0 !important;
+  border-radius: 1.25rem; /* Bootstrap's rounded-3 equivalent */
   box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3), 0 5px 15px rgba(118, 75, 162, 0.2);
   color: white;
   position: relative;
@@ -42,8 +42,8 @@
   margin: 0 0 2rem 0;
   background: linear-gradient(45deg, #ffffff, #f8f9ff, #ffeaa7);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   text-shadow: 0 2px 10px rgba(255, 255, 255, 0.3);
   animation: titleGlow 2s ease-in-out infinite alternate;
 }
@@ -54,24 +54,17 @@
 }
 
 .steps-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
   gap: 2rem;
   position: relative;
 }
 
 .step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   gap: 0.6rem;
   padding: 1.8rem 1.2rem;
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 18px;
+  border-radius: 1.125rem; /* Bootstrap's rounded-3 equivalent */
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
@@ -200,7 +193,7 @@
   .how-to-use {
     padding: 1.5rem 1rem;
     margin: 1rem;
-    border-radius: 12px;
+    border-radius: 0.75rem; /* Bootstrap's rounded-2 equivalent */
   }
   
   .how-to-use-title {

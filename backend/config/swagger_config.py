@@ -73,13 +73,6 @@ swagger_template = {
                 "description": "Get list of all supported programming languages"
             }
         },
-        "/languages/{language_code}": {
-            "get": {
-                "tags": ["language"],
-                "summary": "Get specific language info",
-                "description": "Get detailed information about a specific programming language"
-            }
-        },
         "/health": {
             "get": {
                 "tags": ["health"],
