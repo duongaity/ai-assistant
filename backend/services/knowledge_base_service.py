@@ -82,6 +82,37 @@ class KnowledgeBaseService:
             self.text_splitter = None
             self.vector_store = None
     
+    def debug_vector_store_status(self):
+        """
+        Debug function để kiểm tra trạng thái vector store
+        """
+        try:
+            if not self.vector_store:
+                print("❌ Vector store is None")
+                return False
+            
+            # Thử lấy tổng số documents
+            collection = self.vector_store._collection
+            count = collection.count()
+            print(f"📊 Vector store status:")
+            print(f"   - Collection name: {collection.name}")
+            print(f"   - Total documents: {count}")
+            
+            if count > 0:
+                # Lấy một vài documents mẫu
+                sample = collection.peek(limit=3)
+                print(f"   - Sample document IDs: {sample.get('ids', [])[:3]}")
+                
+                # Test search
+                test_docs = self.vector_store.similarity_search("test", k=1)
+                print(f"   - Test search returned: {len(test_docs)} documents")
+                
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error checking vector store status: {str(e)}")
+            return False
+    
     def is_allowed_file(self, filename):
         """
         Kiểm tra file có được phép upload không
@@ -378,28 +409,44 @@ class KnowledgeBaseService:
             if not self.vector_store:
                 return False, [], "Vector store not initialized"
             
-            # Tạo filter nếu cần tìm trong file cụ thể
-            search_kwargs = {"k": n_results}
-            if file_id:
-                search_kwargs["filter"] = {"file_id": file_id}
+            # Kiểm tra xem có documents nào trong vector store không
+            try:
+                # Test query để kiểm tra vector store có hoạt động không
+                test_docs = self.vector_store.similarity_search("test", k=1)
+                print(f"🔍 Vector store test: Found {len(test_docs)} documents total")
+            except Exception as test_e:
+                print(f"⚠️ Vector store test failed: {str(test_e)}")
             
-            # Thực hiện similarity search với Langchain
-            docs = self.vector_store.similarity_search(query, **search_kwargs)
+            # Thực hiện similarity search với đúng syntax của Langchain ChromaDB
+            if file_id:
+                # Tìm kiếm với filter
+                docs = self.vector_store.similarity_search(
+                    query, 
+                    k=n_results,
+                    filter={"file_id": file_id}
+                )
+            else:
+                # Tìm kiếm toàn bộ
+                docs = self.vector_store.similarity_search(query, k=n_results)
+            
+            print(f"🔍 Search query: '{query}' - Found {len(docs)} documents")
             
             # Format kết quả
             formatted_results = []
-            for doc in docs:
+            for i, doc in enumerate(docs):
                 result_item = {
                     "content": doc.page_content,
                     "metadata": doc.metadata,
-                    "similarity_score": 0.8  # Langchain similarity_search không trả về score mặc định
+                    "similarity_score": 0.8 - (i * 0.1)  # Điểm giảm dần theo thứ tự
                 }
                 formatted_results.append(result_item)
+                print(f"📄 Result {i+1}: {doc.page_content[:100]}...")
             
             return True, formatted_results, None
             
         except Exception as e:
             error_msg = f"Error searching Langchain vector store: {str(e)}"
+            print(f"❌ Search error: {error_msg}")
             return False, [], error_msg
     
     def search_with_scores(self, query: str, n_results: int = 5, file_id: Optional[str] = None) -> tuple:
@@ -418,28 +465,40 @@ class KnowledgeBaseService:
             if not self.vector_store:
                 return False, [], "Vector store not initialized"
             
-            # Tạo filter nếu cần
-            search_kwargs = {"k": n_results}
+            # Sử dụng similarity_search_with_score với đúng syntax
             if file_id:
-                search_kwargs["filter"] = {"file_id": file_id}
+                # Tìm kiếm với filter
+                docs_with_scores = self.vector_store.similarity_search_with_score(
+                    query, 
+                    k=n_results,
+                    filter={"file_id": file_id}
+                )
+            else:
+                # Tìm kiếm toàn bộ
+                docs_with_scores = self.vector_store.similarity_search_with_score(query, k=n_results)
             
-            # Sử dụng similarity_search_with_score
-            docs_with_scores = self.vector_store.similarity_search_with_score(query, **search_kwargs)
+            print(f"🔍 Search with scores: '{query}' - Found {len(docs_with_scores)} documents")
             
-            # Format kết quả với scores
+            # Format kết quả với scores thực tế
             formatted_results = []
-            for doc, score in docs_with_scores:
+            for i, (doc, score) in enumerate(docs_with_scores):
+                # ChromaDB trả về distance (0 = identical, higher = less similar)
+                # Chuyển đổi thành similarity score (0-1, higher = more similar)
+                similarity_score = max(0, 1 - score)
+                
                 result_item = {
                     "content": doc.page_content,
                     "metadata": doc.metadata,
-                    "similarity_score": 1 - score  # Chuyển đổi distance thành similarity
+                    "similarity_score": round(similarity_score, 4)
                 }
                 formatted_results.append(result_item)
+                print(f"📄 Result {i+1} (score: {similarity_score:.4f}): {doc.page_content[:100]}...")
             
             return True, formatted_results, None
             
         except Exception as e:
             error_msg = f"Error searching with scores: {str(e)}"
+            print(f"❌ Search with scores error: {error_msg}")
             return False, [], error_msg
     
     def delete_from_vector_db(self, file_id):
@@ -762,26 +821,32 @@ class KnowledgeBaseService:
             tuple: (success, search_results, error_message)
         """
         try:
-            # Tìm kiếm trong vector database
-            vector_success, vector_results, vector_error = self.search_in_vector_db(
+            print(f"🔍 Searching knowledge base for: '{query}' (max_results: {max_results})")
+            
+            # Sử dụng hàm search_with_scores để có điểm similarity thực tế
+            vector_success, vector_results, vector_error = self.search_with_scores(
                 query, max_results, file_id
             )
             
             if not vector_success:
+                print(f"❌ Vector search failed: {vector_error}")
                 return False, [], f"Vector search failed: {vector_error}"
+            
+            print(f"✅ Vector search successful: Found {len(vector_results)} results")
             
             # Format kết quả cho API response
             formatted_results = []
             for result in vector_results:
                 formatted_result = {
                     "content": result["content"],
-                    "similarity_score": round(result["similarity_score"], 4),
+                    "similarity_score": result["similarity_score"],
                     "source": {
                         "file_id": result["metadata"].get("file_id"),
                         "title": result["metadata"].get("title"),
                         "filename": result["metadata"].get("filename"),
                         "filename_uuid": result["metadata"].get("filename_uuid"),
-                        "chunk_index": result["metadata"].get("chunk_index")
+                        "chunk_index": result["metadata"].get("chunk_index"),
+                        "chunk_length": len(result["content"])
                     }
                 }
                 formatted_results.append(formatted_result)
@@ -789,7 +854,9 @@ class KnowledgeBaseService:
             return True, formatted_results, None
             
         except Exception as e:
-            return False, [], f"Search failed: {str(e)}"
+            error_msg = f"Search failed: {str(e)}"
+            print(f"❌ Knowledge base search error: {error_msg}")
+            return False, [], error_msg
     
     def get_vector_db_stats(self):
         """

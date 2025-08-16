@@ -699,6 +699,13 @@ def clear_all_chunks():
                         'items': {'type': 'string'},
                         'description': 'Optional: Search only in specific files (file UUIDs)',
                         'example': ['uuid1', 'uuid2']
+                    },
+                    'display_language': {
+                        'type': 'string',
+                        'description': 'Language for AI response (en for English, vi for Vietnamese)',
+                        'enum': ['en', 'vi'],
+                        'default': 'en',
+                        'example': 'vi'
                     }
                 },
                 'required': ['message']
