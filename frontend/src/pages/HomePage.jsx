@@ -6,9 +6,10 @@ import Footer from '../components/Footer';
 import HowToUse from '../components/HowToUse';
 import CodeEditor from '../components/CodeEditor';
 
-function HomePage({ 
+function HomePage({
   onNavigate,
   language,
+  displayLanguage,
   supportedLanguages,
   onLanguageChange,
   onFileUpload,
@@ -23,17 +24,16 @@ function HomePage({
   setCode,
   error,
   commentedCode,
-  tokensInfo
 }) {
   return (
     <div className="page-container">
       <Header currentPage="home" onNavigate={onNavigate} />
-      
+
       <main className="app-main">
         <div className="controls">
           <div className="controls-left">
             <div className="language-selector">
-              <label htmlFor="language">Programming Language:</label>
+              <label htmlFor="language">{displayLanguage === 'vi' ? 'Ngôn ngữ lập trình:' : 'Programming Language:'}</label>
               <select
                 id="language"
                 value={language}
@@ -56,16 +56,16 @@ function HomePage({
                 style={{ display: 'none' }}
               />
               <button
-                onClick={() => fileInputRef && fileInputRef.click()}
+                onClick={() => fileInputRef && fileInputRef.current && fileInputRef.current.click()}
                 className="btn btn-secondary"
               >
-                📁 Upload File
+                📁 {displayLanguage === 'vi' ? 'Tải tập tin' : 'Upload File'}
               </button>
               <button
                 onClick={onClearAll}
                 className="btn btn-secondary"
               >
-                🗑️ Clear All
+                🗑️ {displayLanguage === 'vi' ? 'Xóa tất cả' : 'Clear All'}
               </button>
             </div>
           </div>
@@ -77,37 +77,37 @@ function HomePage({
                   onClick={onCommentCode}
                   className="btn btn-quick-action"
                   disabled={loading || !code.trim()}
-                  title="Add detailed comments to code"
+                  title={displayLanguage === 'vi' ? 'Thêm comment chi tiết vào code' : 'Add detailed comments to code'}
                 >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>💬</span>
-                  Comment Code
+                  <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>💬</span>
+                  {displayLanguage === 'vi' ? 'Thêm Ghi Chú' : 'Comment Code'}
                 </button>
                 <button
                   onClick={onFindBugs}
                   className="btn btn-quick-action"
                   disabled={loading || !code.trim()}
-                  title="Find and fix bugs in code"
+                  title={displayLanguage === 'vi' ? 'Tìm và sửa lỗi trong code' : 'Find and fix bugs in code'}
                 >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>🐛</span>
-                  Find Bugs
+                  <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>🐛</span>
+                  {displayLanguage === 'vi' ? 'Tìm Lỗi Code' : 'Find Bugs'}
                 </button>
                 <button
                   onClick={onOptimize}
                   className="btn btn-quick-action"
                   disabled={loading || !code.trim()}
-                  title="Optimize code performance"
+                  title={displayLanguage === 'vi' ? 'Tối ưu hiệu suất code' : 'Optimize code performance'}
                 >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>⚡</span>
-                  Optimize
+                  <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>⚡</span>
+                  {displayLanguage === 'vi' ? 'Tối Ưu Code' : 'Optimize Code'}
                 </button>
                 <button
                   onClick={onGenerateTests}
                   className="btn btn-quick-action"
                   disabled={loading || !code.trim()}
-                  title="Generate unit tests for code"
+                  title={displayLanguage === 'vi' ? 'Tạo unit test cho code' : 'Generate unit tests for code'}
                 >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>🧪</span>
-                  Generate Tests
+                  <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>🧪</span>
+                  {displayLanguage === 'vi' ? 'Tạo Unit Test' : 'Generate Tests'}
                 </button>
               </div>
             </div>
@@ -122,22 +122,22 @@ function HomePage({
 
         <div className="code-sections">
           <div className="code-section">
-            <h3>📥 Input</h3>
+            <h3>📥 {displayLanguage === 'vi' ? 'Nhập Code' : 'Input'}</h3>
             <CodeEditor
               value={code}
               onChange={setCode}
               language={language}
-              placeholder={`Enter or paste ${language} code here...`}
+              placeholder={displayLanguage === 'vi' ? `Nhập hoặc dán code ${language} vào đây...` : `Enter or paste ${language} code here...`}
               rows={15}
             />
           </div>
 
           <div className="code-section">
-            <h3>📤 Output</h3>
+            <h3>📤 {displayLanguage === 'vi' ? 'Kết quả' : 'Output'}</h3>
             {loading ? (
               <div className="loading-container">
                 <div className="loading-spinner"></div>
-                <p>Processing code with AI...</p>
+                <p>{displayLanguage === 'vi' ? 'Đang xử lý code với AI...' : 'Processing code with AI...'}</p>
               </div>
             ) : commentedCode ? (
               <div className="code-output">
@@ -152,30 +152,11 @@ function HomePage({
               </div>
             ) : (
               <div className="placeholder">
-                AI Assistant output will be displayed here...
+                {displayLanguage === 'vi' ? 'Kết quả từ AI Assistant sẽ được hiển thị ở đây...' : 'AI Assistant output will be displayed here...'}
               </div>
             )}
           </div>
         </div>
-
-        {commentedCode && (
-          <div className="stats">
-            {tokensInfo && (
-              <div className="stats-row">
-                <p>
-                  📊 <strong>Tokens:</strong> 
-                  Input ~{tokensInfo.estimated_input_tokens} tokens | 
-                  Max allowed: {tokensInfo.max_tokens_used} tokens | 
-                  Output ~{tokensInfo.estimated_output_tokens} tokens
-                </p>
-                <p className="cost-estimate">
-                  💰 <strong>Cost estimate:</strong> 
-                  ~${((tokensInfo.estimated_input_tokens * 0.00015 + tokensInfo.estimated_output_tokens * 0.0006) / 1000).toFixed(4)} USD
-                </p>
-              </div>
-            )}
-          </div>
-        )}
       </main>
 
       <HowToUse />

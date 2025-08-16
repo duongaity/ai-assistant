@@ -9,11 +9,10 @@ services:
     container_name: ai-assistant-backend
     ports:
       - "8888:8888"
+    env_file:
+      - application.env
     environment:
       - FLASK_ENV=production
-      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-https://your-openai-resource.openai.azure.com/}
-      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-your-api-key-here}
-      - AZURE_OPENAI_DEPLOYMENT_NAME=${AZURE_OPENAI_DEPLOYMENT_NAME:-gpt-4o-mini}
     volumes:
       - ./backend:/app
     restart: unless-stopped
@@ -33,7 +32,7 @@ services:
       dockerfile: Dockerfile
     container_name: ai-assistant-frontend
     ports:
-      - "3000:80"
+      - "3000:3000"
     depends_on:
       - backend
     restart: unless-stopped

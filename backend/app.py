@@ -20,13 +20,15 @@ from config.swagger_config import swagger_config, swagger_template
 
 # Import services
 from services.ai_service import AIService
+from services.langchain_service import LangchainService
+from services.knowledge_base_service import KnowledgeBaseService
 
 # Import API modules
-from api.chat import chat_bp, init_chat_api
-from api.language import language_bp
-from api.health import health_bp, init_health_api
-from api.knowledge_base import knowledge_base_bp, init_knowledge_base_api
-from api.tts import tts_bp
+from api.chat_api import chat_bp, init_chat_api
+from api.language_api import language_bp
+from api.health_api import health_bp, init_health_api
+from api.knowledge_base_api import knowledge_base_bp, init_knowledge_base_api
+from api.tts_api import tts_bp
 
 # Load environment variables
 load_dotenv()
@@ -47,13 +49,19 @@ def create_app():
     # Initialize Swagger documentation
     swagger = Swagger(app, config=swagger_config, template=swagger_template)
     
-    # Initialize AI Service
-    ai_service = AIService()
+    # Initialize Langchain Service
+    langchain_service = LangchainService()
+    
+    # Initialize Knowledge Base Service với Langchain
+    knowledge_base_service = KnowledgeBaseService()
+    
+    # Initialize AI Service với Langchain integration
+    ai_service = AIService(langchain_service=langchain_service)
     
     # Initialize API modules với dependency injection
     init_chat_api(ai_service)
     init_health_api(ai_service)
-    init_knowledge_base_api()
+    init_knowledge_base_api(knowledge_base_service)
     
     # Register API Blueprints với prefix /api
     app.register_blueprint(chat_bp, url_prefix='/api')

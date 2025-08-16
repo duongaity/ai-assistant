@@ -60,13 +60,7 @@ def init_health_api(ai_service):
 })
 def health_check():
     """
-    Endpoint kiểm tra sức khỏe cơ bản - Kiểm tra xem API server có đang chạy không
-    
-    Endpoint này luôn trả về 200 nếu server đang chạy.
-    Được sử dụng bởi load balancer và các công cụ giám sát.
-    
-    Returns:
-        JSON response chứa thông tin sức khỏe cơ bản
+    Kiểm tra xem API server có đang chạy không
     """
     return jsonify({
         "status": "healthy",

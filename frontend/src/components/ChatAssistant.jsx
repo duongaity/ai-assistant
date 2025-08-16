@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
 import CodeBlock from './CodeBlock';
 import { parseMessageContent, detectLanguage, formatTextContent } from '../utils/messageParser';
+import { useSession } from './SessionManager';
+import { useLanguage } from '../contexts/LanguageContext';
+import apiService from '../services/apiService';
 import './ChatAssistant.css';
-
-const API_BASE_URL = 'http://localhost:8888/api';
 
 const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onChatResult }) => {
   const [messages, setMessages] = useState([]);
@@ -15,6 +15,12 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
   const chatRef = useRef(null);
+
+  // Use session context
+  const { sessionId, addToSearchHistory } = useSession();
+  
+  // Use language context for display language
+  const { language: displayLanguage } = useLanguage();
 
   // Auto scroll to bottom - Tự động cuộn xuống cuối
   useEffect(() => {
@@ -52,23 +58,20 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
   const handleSendMessage = async (messageText = inputMessage, isQuickAction = false) => {
     if (!messageText.trim() || loading) return;
 
-    // For manual chat input, include current file content if available - Cho chat thủ công, bao gồm nội dung file hiện tại nếu có
+    // For manual chat input, include current file content if available
     let finalMessage = messageText;
     if (!isQuickAction && currentCode && currentCode.trim()) {
-      // Add current code context for chat questions - Thêm context code hiện tại cho câu hỏi chat
       finalMessage = `${messageText}\n\nCurrent code for reference:\n\`\`\`${currentLanguage}\n${currentCode}\n\`\`\``;
     }
 
-    // For manual input (chat), always show in chat - Cho input thủ công (chat), luôn hiển thị trong chat
-    // For quick actions, don't show in chat but show loading message - Cho quick actions, không hiển thị trong chat nhưng hiển thị tin nhắn loading
+    // Add message to UI if not quick action
     if (!isQuickAction) {
       const userMessage = { type: 'user', content: messageText, timestamp: new Date() };
       setMessages(prev => [...prev, userMessage]);
     } else {
-      // For quick actions, add a temporary loading message to show progress - Cho quick actions, thêm tin nhắn loading tạm thời để hiển thị tiến trình
       const loadingMessage = { 
         type: 'bot', 
-        content: '🔄 Processing your code...', 
+        content: displayLanguage === 'vi' ? '🔄 Đang xử lý code của bạn...' : '🔄 Processing your code...', 
         timestamp: new Date(),
         isQuickActionLoading: true 
       };
@@ -80,41 +83,52 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
     setError('');
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/chat`, {
-        message: finalMessage, // Send message with context to API - Gửi tin nhắn với context đến API
-        history: messages.slice(-10), // Last 10 messages for context - 10 tin nhắn cuối để làm context
-        is_quick_action: isQuickAction // Add flag so backend knows this is quick action - Thêm flag để backend biết đây là quick action
-      });
+      // Debug log để kiểm tra ngôn ngữ
+      console.log('Display language:', displayLanguage);
+      console.log('Programming language:', currentLanguage);
+      
+      // Use apiService with session support (no need to send message history)
+      const response = await apiService.chatWithAI(
+        finalMessage,
+        [], // Empty history since session is managed on backend
+        isQuickAction,
+        displayLanguage, // Ngôn ngữ hiển thị (en/vi)
+        currentLanguage || 'javascript' // Ngôn ngữ lập trình
+      );
 
-      if (response.data.success) {
-        // Quick actions always go to output - Quick actions luôn chuyển đến output
-        if (isQuickAction && onChatResult && response.data.response) {
-          // Remove the loading message for quick actions - Xóa tin nhắn loading cho quick actions
+      if (response.success) {
+        // Add to search history for tracking
+        addToSearchHistory({
+          query: messageText,
+          timestamp: new Date(),
+          type: isQuickAction ? 'quick_action' : 'chat'
+        });
+
+        if (isQuickAction && onChatResult && response.response) {
+          // Remove loading message and send to output
           setMessages(prev => prev.filter(msg => !msg.isQuickActionLoading));
-          onChatResult(response.data.response, response.data.tokens_info);
+          onChatResult(response.response, response.tokens_info);
         } else {
-          // Manual input always shows in chat - Input thủ công luôn hiển thị trong chat
+          // Show in chat
           const botMessage = {
             type: 'bot',
-            content: response.data.response,
+            content: response.response,
             timestamp: new Date()
           };
           setMessages(prev => [...prev, botMessage]);
         }
       } else {
-        // Remove loading message on error - Xóa tin nhắn loading khi có lỗi
         if (isQuickAction) {
           setMessages(prev => prev.filter(msg => !msg.isQuickActionLoading));
         }
-        setError(response.data.error || 'An error occurred');
+        setError(response.error || (displayLanguage === 'vi' ? 'Đã xảy ra lỗi' : 'An error occurred'));
       }
     } catch (err) {
       console.error('Chat error:', err);
-      // Remove loading message on error - Xóa tin nhắn loading khi có lỗi
       if (isQuickAction) {
         setMessages(prev => prev.filter(msg => !msg.isQuickActionLoading));
       }
-      setError('Unable to connect to AI Assistant');
+      setError(displayLanguage === 'vi' ? 'Không thể kết nối với Trợ Lý AI' : 'Unable to connect to AI Assistant');
     } finally {
       setLoading(false);
     }
@@ -147,6 +161,8 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
   const clearChat = () => {
     setMessages([]);
     setError('');
+    // Note: Session memory is not cleared here - only UI
+    // Use SessionManager to clear actual memory if needed
   };
 
   const renderMessage = (message, index) => {
@@ -226,20 +242,20 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
       <div className="chat-header">
         <div className="chat-title">
           <span className="chat-icon">🤖</span>
-          <h3>AI Programming Assistant</h3>
+          <h3>{displayLanguage === 'vi' ? 'Trợ Lý Lập Trình AI' : 'AI Programming Assistant'}</h3>
         </div>
         <div className="chat-controls">
           <button 
             onClick={clearChat} 
             className="control-btn clear-btn"
-            title="Clear chat"
+            title={displayLanguage === 'vi' ? 'Xóa cuộc trò chuyện' : 'Clear chat'}
           >
             🧽
           </button>
           <button 
             onClick={onToggle} 
             className="control-btn close-btn"
-            title="Close chat"
+            title={displayLanguage === 'vi' ? 'Đóng chat' : 'Close chat'}
           >
             X
           </button>
@@ -250,17 +266,30 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
         {messages.length === 0 ? (
           <div className="welcome-message">
             <div className="welcome-icon">🚀</div>
-            <h4>Welcome to AI Assistant!</h4>
-            <p>I can help you with:</p>
+            <h4>{displayLanguage === 'vi' ? 'Chào mừng đến với Trợ Lý AI!' : 'Welcome to AI Assistant!'}</h4>
+            <p>{displayLanguage === 'vi' ? 'Tôi có thể giúp bạn với:' : 'I can help you with:'}</p>
             <ul>
-              <li>Code explanation and algorithms</li>
-              <li>Programming questions and answers</li>
-              <li>Best practices guidance</li>
-              <li>Architecture and design consulting</li>
-              <li>Debugging and troubleshooting</li>
-              <li>Code review and feedback</li>
+              {displayLanguage === 'vi' ? (
+                <>
+                  <li>Giải thích code và thuật toán</li>
+                  <li>Câu hỏi và trả lời về lập trình</li>
+                  <li>Hướng dẫn best practices</li>
+                  <li>Tư vấn kiến trúc và thiết kế</li>
+                  <li>Debug và khắc phục sự cố</li>
+                  <li>Review code và phản hồi</li>
+                </>
+              ) : (
+                <>
+                  <li>Code explanation and algorithms</li>
+                  <li>Programming questions and answers</li>
+                  <li>Best practices guidance</li>
+                  <li>Architecture and design consulting</li>
+                  <li>Debugging and troubleshooting</li>
+                  <li>Code review and feedback</li>
+                </>
+              )}
             </ul>
-            <p>💡 Get started by sending a message or asking programming questions!</p>
+            <p>{displayLanguage === 'vi' ? '💡 Bắt đầu bằng cách gửi tin nhắn hoặc đặt câu hỏi về lập trình!' : '💡 Get started by sending a message or asking programming questions!'}</p>
           </div>
         ) : (
           messages.map(renderMessage)
@@ -295,7 +324,7 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
             value={inputMessage}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
-            placeholder="What would you like to ask?"
+            placeholder={displayLanguage === 'vi' ? 'Bạn muốn hỏi gì?' : 'What would you like to ask?'}
             className="message-input"
             rows="1"
             disabled={loading}

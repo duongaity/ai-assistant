@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import React, { useState, useEffect, useRef } from 'react';
 import ChatAssistant from './components/ChatAssistant';
-import CodeEditor from './components/CodeEditor';
 import HomePage from './pages/HomePage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
+import LanguageSelector from './components/LanguageSelector';
+import { SessionProvider } from './components/SessionManager';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
+import apiService from './services/apiService';
 import './App.css';
 
-const API_BASE_URL = 'http://localhost:8888/api';
-
-function App() {
+function AppContent() {
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('java');
   const [commentedCode, setCommentedCode] = useState('');
@@ -18,7 +16,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [supportedLanguages, setSupportedLanguages] = useState([]);
-  const [fileInputRef, setFileInputRef] = useState(null);
+  const fileInputRef = useRef(null);
   const [chatVisible, setChatVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => {
     // Check URL path to determine initial page
@@ -29,13 +27,16 @@ function App() {
     return 'home';
   }); // Add page state
 
+  // Use language context for display language
+  const { language: displayLanguage } = useLanguage();
+
   useEffect(() => {
-    // Fetch supported languages - Lấy danh sách ngôn ngữ được hỗ trợ
+    // Fetch supported languages
     const fetchLanguages = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/languages`);
-        if (response.data.success) {
-          setSupportedLanguages(response.data.languages);
+        const response = await apiService.getSupportedLanguages();
+        if (response.success) {
+          setSupportedLanguages(response.languages); // Fix: response.languages thay vì response.data.languages
         }
       } catch (err) {
         console.error('Error fetching languages:', err);
@@ -73,7 +74,7 @@ function App() {
     const allowedExtensions = ['.txt', '.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.cpp', '.c', '.cs', '.php', '.rb', '.go', '.rs', '.swift', '.kt', '.scala', '.clj', '.sh', '.sql', '.html', '.css', '.json', '.xml', '.yaml', '.yml'];
     const fileName = file.name.toLowerCase();
     const isAllowed = allowedExtensions.some(ext => fileName.endsWith(ext));
-    
+
     if (!isAllowed) {
       setError('File format not supported. Please select a valid code file.');
       return;
@@ -86,7 +87,7 @@ function App() {
       setCommentedCode('');
       setTokensInfo(null);
       setError('');
-      
+
       // Auto-detect language from file extension - Tự động phát hiện ngôn ngữ từ phần mở rộng file
       const ext = fileName.split('.').pop();
       const languageMap = {
@@ -110,26 +111,20 @@ function App() {
         'sh': 'bash',
         'sql': 'sql'
       };
-      
+
       if (languageMap[ext]) {
         setLanguage(languageMap[ext]);
       }
     };
-    
+
     reader.onerror = () => {
       setError('Cannot read file. Please try again.');
     };
-    
+
     reader.readAsText(file);
-    
+
     // Reset input value to allow selecting the same file again - Reset giá trị input để cho phép chọn lại cùng file
     event.target.value = '';
-  };
-
-  const triggerFileUpload = () => {
-    if (fileInputRef) {
-      fileInputRef.click();
-    }
   };
 
   const toggleChat = () => {
@@ -142,7 +137,7 @@ function App() {
     setError('');
   };
 
-  // Quick Action handlers - Xử lý các Quick Action
+  // Quick Action handlers
   const handleQuickAction = async (actionType, prompt) => {
     if (!code.trim()) {
       setError('Please enter code before using Quick Action');
@@ -155,18 +150,24 @@ function App() {
     const message = `${prompt}\n\n\`\`\`${language}\n${code}\n\`\`\``;
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/chat`, {
-        message: message,
-        history: [],
-        is_quick_action: true
-      });
+      // Debug log để kiểm tra ngôn ngữ
+      console.log('Quick Action - Display language:', displayLanguage);
+      console.log('Quick Action - Programming language:', language);
 
-      if (response.data.success) {
-        setCommentedCode(response.data.response);
-        setTokensInfo(response.data.tokens_info);
+      const response = await apiService.chatWithAI(
+        message, 
+        [], 
+        true, 
+        displayLanguage, // Display language (en/vi)
+        language // Programming language (java/python/javascript...)
+      );
+
+      if (response.success) {
+        setCommentedCode(response.response); // Fix: response.response thay vì response.data.response
+        setTokensInfo(response.tokens_info); // Fix: response.tokens_info thay vì response.data.tokens_info
         setError('');
       } else {
-        setError(response.data.error || 'An error occurred while processing Quick Action');
+        setError(response.error || 'An error occurred while processing Quick Action');
       }
     } catch (err) {
       console.error('Quick Action error:', err);
@@ -176,10 +177,33 @@ function App() {
     }
   };
 
-  const handleCommentCode = () => handleQuickAction('comment', 'Add detailed comments in Vietnamese to this code, explain what each part does:');
-  const handleFindBugs = () => handleQuickAction('debug', 'Find and fix bugs in this code:');
-  const handleOptimize = () => handleQuickAction('optimize', 'Optimize the performance of this code:');
-  const handleGenerateTests = () => handleQuickAction('test', 'Generate unit tests for this code:');
+  const handleCommentCode = () => {
+    const prompt = displayLanguage === 'vi'
+      ? 'Thêm comment chi tiết bằng tiếng Việt vào code này, giải thích từng phần làm gì:'
+      : 'Add detailed comments in English to this code, explain what each part does:';
+    handleQuickAction('comment', prompt);
+  };
+
+  const handleFindBugs = () => {
+    const prompt = displayLanguage === 'vi'
+      ? 'Tìm và sửa lỗi trong code này:'
+      : 'Find and fix bugs in this code:';
+    handleQuickAction('debug', prompt);
+  };
+
+  const handleOptimize = () => {
+    const prompt = displayLanguage === 'vi'
+      ? 'Tối ưu hiệu suất của code này:'
+      : 'Optimize the performance of this code:';
+    handleQuickAction('optimize', prompt);
+  };
+
+  const handleGenerateTests = () => {
+    const prompt = displayLanguage === 'vi'
+      ? 'Tạo unit test cho code này:'
+      : 'Generate unit tests for this code:';
+    handleQuickAction('test', prompt);
+  };
 
   // Navigation handlers
   const navigateToHome = () => {
@@ -224,6 +248,7 @@ function App() {
       <HomePage
         onNavigate={handleNavigate}
         language={language}
+        displayLanguage={displayLanguage}
         supportedLanguages={supportedLanguages}
         onLanguageChange={handleLanguageChange}
         onFileUpload={handleFileUpload}
@@ -244,31 +269,44 @@ function App() {
   };
 
   return (
-    <div className="App">
-      {renderContent()}
+    <SessionProvider>
+      <div className="App">
+        {/* Display Language Selector - Fixed position on left */}
+        <LanguageSelector />
 
-      {/* Floating Chat Button - Only show on home page */}
-      {currentPage === 'home' && (
-        <button
-          onClick={toggleChat}
-          className={`floating-chat-btn ${chatVisible ? 'active' : ''}`}
-          title={chatVisible ? "Close AI Assistant" : "Open AI Assistant"}
-        >
-          {chatVisible ? '✕' : '🤖'}
-        </button>
-      )}
+        {renderContent()}
 
-      {/* Chat Assistant Sidebar - Only show on home page */}
-      {currentPage === 'home' && (
-        <ChatAssistant 
-          isVisible={chatVisible} 
-          onToggle={toggleChat}
-          currentCode={code}
-          currentLanguage={language}
-          onChatResult={handleChatResult}
-        />
-      )}
-    </div>
+        {/* Floating Chat Button - Only show on home page */}
+        {currentPage === 'home' && (
+          <button
+            onClick={toggleChat}
+            className={`floating-chat-btn ${chatVisible ? 'active' : ''}`}
+            title={chatVisible ? "Close AI Assistant" : "Open AI Assistant"}
+          >
+            {chatVisible ? '✕' : '🤖'}
+          </button>
+        )}
+
+        {/* Chat Assistant Sidebar - Only show on home page */}
+        {currentPage === 'home' && (
+          <ChatAssistant
+            isVisible={chatVisible}
+            onToggle={toggleChat}
+            currentCode={code}
+            currentLanguage={language}
+            onChatResult={handleChatResult}
+          />
+        )}
+      </div>
+    </SessionProvider>
+  );
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
 

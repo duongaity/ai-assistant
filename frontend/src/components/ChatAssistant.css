@@ -2,10 +2,10 @@
 
 .chat-assistant {
   position: fixed;
-  top: 50px;
+  top: 0px;
   right: 0;
   width: 40%;
-  height: calc(100vh - 50px);
+  height: calc(100vh);
   background: #ffffff;
   border-left: 1px solid #e0e0e0;
   box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);

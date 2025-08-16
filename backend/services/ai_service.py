@@ -1,99 +1,81 @@
 """
-AI Service - Xử lý tất cả logic liên quan đến Azure OpenAI
+AI Service - Service chính để giao tiếp với Langchain
 
 Class này chứa:
-- Kết nối Azure OpenAI client
-- Token estimation và calculation
-- Chat với AI Assistant
-- Function calling capabilities
+- Integration với LangchainService để xử lý RAG và workflows phức tạp
+- Fallback operations cho các tác vụ cơ bản
+- Legacy function calling support (deprecated)
 """
 
 import os
-from openai import AzureOpenAI
 from dotenv import load_dotenv
 import json
+from typing import List, Dict, Any, Optional
 
 # Load environment variables
 load_dotenv()
 
 class AIService:
     """
-    Service class chuyên xử lý AI operations thông qua Azure OpenAI
+    Service class tích hợp với Langchain để xử lý AI operations
     
     Chức năng chính:
-    - Chat với AI Assistant (normal chat và quick actions)
-    - Function calling để xử lý tác vụ chuyên biệt
-    - Token management và cost optimization
-    - Context management cho conversations
+    - Delegation cho LangchainService để xử lý các tác vụ phức tạp
+    - RAG operations với knowledge base
+    - Agent-based workflows
+    - Backward compatibility với legacy function calls
     """
     
-    def __init__(self):
+    def __init__(self, langchain_service=None):
         """
-        Khởi tạo Azure OpenAI client để kết nối với AI service
+        Khởi tạo AI Service với Langchain integration
         
-        Sử dụng environment variables để lấy:
-        - AZURE_OPENAI_ENDPOINT: URL endpoint của Azure OpenAI
-        - AZURE_OPENAI_API_KEY: API key để xác thực
-        - AZURE_OPENAI_DEPLOYMENT_NAME: Tên deployment model (mặc định: GPT-4o-mini)
+        Args:
+            langchain_service: Instance của LangchainService
+        """
+        self.langchain_service = langchain_service
+        
+        # Khởi tạo legacy Azure OpenAI client cho backward compatibility
+        self._init_legacy_client()
+    
+    def _init_legacy_client(self):
+        """
+        Khởi tạo legacy Azure OpenAI client cho fallback operations
         """
         try:
-            # Khởi tạo Azure OpenAI client với thông tin từ environment variables
+            from openai import AzureOpenAI
+            
             self.client = AzureOpenAI(
-                api_version="2024-07-01-preview",                    # API version mới nhất hỗ trợ function calling
-                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),   # Endpoint Azure OpenAI từ .env
-                api_key=os.getenv("AZURE_OPENAI_API_KEY"),           # API key từ .env
+                api_version="2024-07-01-preview",
+                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                api_key=os.getenv("AZURE_OPENAI_API_KEY"),
             )
-            # Tên deployment model, mặc định là GPT-4o-mini nếu không set trong .env
             self.deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "GPT-4o-mini")
+            print("✅ Legacy Azure OpenAI client initialized for fallback")
             
         except Exception as e:
-            print(f"Error initializing Azure OpenAI client: {e}")
-            self.client = None  # Set None nếu không thể kết nối
+            print(f"⚠️ Legacy client initialization failed: {e}")
+            self.client = None
     
     def _estimate_tokens(self, text):
         """
-        Ước tính số tokens từ text để tính toán chi phí và giới hạn API
-        
-        Công thức ước tính:
-        - 1 token ≈ 3-4 characters cho tiếng Anh
-        - 1 token ≈ 2-3 characters cho tiếng Việt (do encoding khác nhau)
-        
-        Args:
-            text (str): Text cần ước tính số tokens
-            
-        Returns:
-            int: Số tokens ước tính (chia cho 3 để an toàn)
+        Ước tính số tokens (legacy method)
         """
-        # Công thức ước tính đơn giản: độ dài text chia 3
-        # Điều này giúp ước tính chi phí và không vượt quá giới hạn API
         return len(text) // 3
     
     def _calculate_max_tokens(self, estimated_input_tokens, is_quick_action=False):
         """
-        Tính toán max_tokens phù hợp để tối ưu chi phí và chất lượng output
-        
-        Args:
-            estimated_input_tokens (int): Số tokens của input prompt
-            is_quick_action (bool): True nếu là quick action (cần ít tokens hơn)
-            
-        Returns:
-            int: max_tokens được tính toán động
+        Tính toán max_tokens (legacy method)
         """
         if is_quick_action:
-            # Quick actions: Ít tokens hơn vì chỉ cần code output
             max_tokens = min(3000, max(800, estimated_input_tokens))
         else:
-            # Normal chat: Nhiều tokens hơn cho giải thích chi tiết
             max_tokens = min(4000, max(500, estimated_input_tokens))
-        
         return max_tokens
     
     def _get_chat_functions(self):
         """
-        Định nghĩa các functions mà AI có thể gọi để xử lý tác vụ chuyên biệt
-        
-        Returns:
-            list: Danh sách function definitions cho OpenAI function calling
+        Legacy function definitions (deprecated - được thay thế bởi Langchain Tools)
         """
         return [
             {
@@ -188,17 +170,117 @@ class AIService:
             }
         ]
     
-    def chat_with_ai(self, message, history=None, is_quick_action=False):
+    def chat_with_ai(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, session_id: str = None, display_language: str = 'en', programming_language: str = 'javascript') -> Dict[str, Any]:
         """
-        Giao tiếp với AI Assistant thông qua Azure OpenAI
+        Chat với AI sử dụng Langchain hoặc fallback to legacy với session support
         
         Args:
-            message (str): Tin nhắn từ user
-            history (list): Lịch sử chat để maintain context
-            is_quick_action (bool): True nếu là quick action
+            message: Tin nhắn từ user
+            history: Lịch sử chat để maintain context
+            is_quick_action: True nếu là quick action
+            session_id: Session ID để maintain memory
+            display_language: Ngôn ngữ hiển thị ('en' hoặc 'vi')
+            programming_language: Ngôn ngữ lập trình (javascript, python, java, ...)
             
         Returns:
             dict: Response từ AI hoặc error message
+        """
+        # Nếu có Langchain service, ưu tiên sử dụng
+        if self.langchain_service:
+            return self._chat_with_langchain(message, history, is_quick_action, session_id, display_language, programming_language)
+        
+        # Fallback to legacy implementation
+        return self._chat_with_legacy(message, history, is_quick_action, display_language)
+    
+    def _chat_with_langchain(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, session_id: str = None, display_language: str = 'en', programming_language: str = 'javascript') -> Dict[str, Any]:
+        """
+        Chat sử dụng Langchain service với session support
+        """
+        try:
+            if is_quick_action:
+                # Xử lý quick actions với Langchain tools
+                result = self.langchain_service.process_code_with_langchain(
+                    task=self._extract_task_from_message(message),
+                    code=self._extract_code_from_message(message),
+                    language=programming_language,  # Sử dụng programming language
+                    system_language=display_language  # Ngôn ngữ hiển thị
+                )
+                
+                if result["success"]:
+                    return {
+                        "success": True,
+                        "response": result["result"],
+                        "tokens_info": {"source": "langchain"},
+                        "session_id": session_id
+                    }
+                else:
+                    # Fallback to legacy if Langchain fails
+                    return self._chat_with_legacy(message, history, is_quick_action, display_language)
+            
+            else:
+                # Normal chat với RAG capabilities và session memory
+                result = self.langchain_service.chat_with_rag(
+                    question=message, 
+                    chat_history=history,
+                    session_id=session_id,
+                    system_language=display_language  # Ngôn ngữ hiển thị
+                )
+                
+                if result["success"]:
+                    return {
+                        "success": True,
+                        "response": result["answer"],
+                        "source_documents": result.get("source_documents", []),
+                        "tokens_info": {"source": "langchain_rag"},
+                        "session_id": result.get("session_id"),
+                        "search_context": result.get("search_context", {})
+                    }
+                else:
+                    # Fallback to legacy
+                    return self._chat_with_legacy(message, history, is_quick_action, display_language)
+                    
+        except Exception as e:
+            print(f"⚠️ Langchain chat failed: {str(e)}, falling back to legacy")
+            return self._chat_with_legacy(message, history, is_quick_action, display_language)
+    
+    def _extract_task_from_message(self, message: str) -> str:
+        """Extract task type from message"""
+        message_lower = message.lower()
+        if "comment" in message_lower or "chú thích" in message_lower:
+            return "comment_code"
+        elif "bug" in message_lower or "lỗi" in message_lower:
+            return "fix_bugs"
+        elif "optimize" in message_lower or "tối ưu" in message_lower:
+            return "optimize_code"
+        elif "test" in message_lower or "kiểm tra" in message_lower:
+            return "generate_unit_tests"
+        else:
+            return "explain_code"
+    
+    def _extract_code_from_message(self, message: str) -> str:
+        """Extract code from message"""
+        # Simple extraction - có thể cải thiện
+        lines = message.split('\n')
+        code_lines = []
+        for line in lines:
+            if any(keyword in line.lower() for keyword in ['class', 'function', 'def', 'public', 'private', 'int', 'string']):
+                code_lines.append(line)
+        return '\n'.join(code_lines) if code_lines else message
+    
+    def _detect_language_from_message(self, message: str) -> str:
+        """Detect programming language from message"""
+        message_lower = message.lower()
+        if 'java' in message_lower:
+            return 'java'
+        elif 'python' in message_lower:
+            return 'python'
+        elif 'javascript' in message_lower or 'js' in message_lower:
+            return 'javascript'
+        else:
+            return 'unknown'
+    def _chat_with_legacy(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, display_language: str = 'en') -> Dict[str, Any]:
+        """
+        Legacy chat implementation (deprecated, dùng cho fallback)
         """
         if not self.client:
             return {
@@ -210,12 +292,11 @@ class AIService:
             # Bước 1: Tạo context messages dựa trên loại request
             context_messages = []
             
-            # Chọn system message phù hợp với từng mode
+            # Chọn system message phù hợp với từng mode và ngôn ngữ
             if is_quick_action:
                 # System message cho quick actions - chỉ trả về code thuần túy
-                context_messages.append({
-                    "role": "system",
-                    "content": """Bạn là một AI Assistant chuyên về lập trình. Khi nhận được yêu cầu từ Quick Action:
+                if display_language == 'vi':
+                    system_content = """Bạn là một AI Assistant chuyên về lập trình. Khi nhận được yêu cầu từ Quick Action:
 
 QUAN TRỌNG: CHỈ TRẢ VỀ CODE ĐÃ XỬ LÝ, KHÔNG GIẢI THÍCH THÊM!
 
@@ -234,12 +315,35 @@ Format trả về:
 
 Ví dụ Input: "Hãy thêm comment chi tiết vào code này: [code]"
 Ví dụ Output: [code đã được comment, không có gì khác]"""
+                else:
+                    system_content = """You are a programming AI Assistant. When receiving Quick Action requests:
+
+IMPORTANT: ONLY RETURN PROCESSED CODE, NO ADDITIONAL EXPLANATIONS!
+
+Processing rules:
+- Comment Code: Add detailed comments to code in English, return commented code
+- Find Bugs: Fix bugs in code, return fixed code  
+- Optimize: Optimize code, return optimized code
+- Generate Tests: Create unit tests, return test code
+
+Return format:
+- DO NOT include markdown (```language)
+- DO NOT explain or describe
+- ONLY pure processed code
+- Keep original code structure and format
+- Comments using standard format for language (// for Java/JS, # for Python, /* */ for block comments)
+
+Example Input: "Please add detailed comments to this code: [code]"
+Example Output: [commented code, nothing else]"""
+                
+                context_messages.append({
+                    "role": "system",
+                    "content": system_content
                 })
             else:
                 # System message cho chat thường - trả lời đầy đủ với giải thích
-                context_messages.append({
-                    "role": "system",
-                    "content": """Bạn là một AI Assistant thông minh và hữu ích, chuyên về lập trình và công nghệ. 
+                if display_language == 'vi':
+                    system_content = """Bạn là một AI Assistant thông minh và hữu ích, chuyên về lập trình và công nghệ. 
                     
 Nhiệm vụ của bạn:
 - Trả lời câu hỏi về lập trình, debug code, giải thích thuật toán
@@ -286,6 +390,58 @@ def add_numbers(a, b):
 ```
 
 Code này thực hiện phép cộng đơn giản."""
+                else:
+                    system_content = """You are an intelligent and helpful AI Assistant specializing in programming and technology.
+                    
+Your tasks:
+- Answer programming questions, debug code, explain algorithms
+- Help write code, optimize and review code
+- AUTOMATICALLY COMMENT CODE when users send code blocks
+- Explain technology concepts in an easy-to-understand way
+- Guide best practices in programming
+- Answer other general questions
+
+IMPORTANT - RESPONSE FORMAT:
+- USE markdown code blocks to wrap code: ```language
+- Always specify language for code blocks (```python, ```java, ```javascript, etc.)
+- Explanatory text uses plain format
+- Code blocks help frontend parse and highlight syntax
+
+Especially important - WHEN COMMENTING CODE:
+- Analyze code and add detailed English comments
+- Explain the purpose of each function/method
+- Add comments for complex logic
+- Use standard comment format for the language (/** */ for Java, # for Python, // for JS...)
+- Return fully commented code in markdown code block with language
+
+Response style:
+- Friendly, enthusiastic and professional
+- Clear explanations with specific examples
+- Use appropriate emojis to create a pleasant atmosphere
+- Respond in English (unless requested otherwise)
+- When explaining code, use markdown code blocks with syntax highlighting
+
+When users share code:
+- Analyze and explain each part
+- AUTOMATICALLY add comments to code
+- Point out strengths and potential improvements
+- Provide optimization suggestions if needed
+- Format code properly with ```language```
+
+Example format:
+Here is the commented Python code:
+
+```python
+# Function to add two numbers
+def add_numbers(a, b):
+    return a + b
+```
+
+This code performs simple addition."""
+                
+                context_messages.append({
+                    "role": "system",
+                    "content": system_content
                 })
 
             # Bước 2: Thêm lịch sử chat để maintain context (chỉ cho normal chat)
@@ -419,7 +575,3 @@ Code này thực hiện phép cộng đơn giản."""
                 "success": False,
                 "error": f"Error processing chat: {str(e)}"
             }
-
-    # =========================================
-    # END OF AI SERVICE - ONLY SINGLE CHAT SUPPORT
-    # =========================================
