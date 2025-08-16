@@ -21,12 +21,12 @@ class ApiService {
    */
   getOrCreateSessionId() {
     let sessionId = localStorage.getItem('ai_session_id');
-    
+
     if (!sessionId) {
       sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       localStorage.setItem('ai_session_id', sessionId);
     }
-    
+
     return sessionId;
   }
 
@@ -37,7 +37,7 @@ class ApiService {
     localStorage.removeItem('ai_session_id');
     this.sessionId = this.getOrCreateSessionId();
     this.cache.clear();
-    
+
     // Clear session memory trên backend
     this.clearSessionMemory();
   }
@@ -54,10 +54,10 @@ class ApiService {
         session_id: this.sessionId, // Thêm session ID
         language: language // Thêm ngôn ngữ hệ thống
       };
-      
+
       // Debug log để kiểm tra payload
       console.log('API Request payload:', requestBody);
-      
+
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
@@ -67,7 +67,7 @@ class ApiService {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'API request failed');
       }
@@ -107,7 +107,7 @@ class ApiService {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Knowledge base chat failed');
       }
@@ -135,7 +135,7 @@ class ApiService {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'File upload failed');
       }
@@ -153,7 +153,7 @@ class ApiService {
   async getUploadedFiles() {
     try {
       const cacheKey = 'uploaded_files';
-      
+
       // Check cache first
       if (this.cache.has(cacheKey)) {
         const cached = this.cache.get(cacheKey);
@@ -164,7 +164,7 @@ class ApiService {
 
       const response = await fetch(`${API_BASE_URL}/knowledge-base/files`);
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch files');
       }
@@ -200,7 +200,7 @@ class ApiService {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Search failed');
       }
@@ -219,7 +219,7 @@ class ApiService {
     try {
       const response = await fetch(`${API_BASE_URL}/knowledge-base/memory/sessions`);
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to get memory sessions');
       }
@@ -239,7 +239,7 @@ class ApiService {
       const targetSessionId = sessionId || this.sessionId;
       const response = await fetch(`${API_BASE_URL}/knowledge-base/memory/history/${targetSessionId}?limit=${limit}`);
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to get search history');
       }
@@ -260,9 +260,9 @@ class ApiService {
       const response = await fetch(`${API_BASE_URL}/knowledge-base/memory/clear/${targetSessionId}`, {
         method: 'POST'
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to clear session memory');
       }
@@ -280,14 +280,14 @@ class ApiService {
   async getSupportedLanguages() {
     try {
       const cacheKey = 'supported_languages';
-      
+
       if (this.cache.has(cacheKey)) {
         return this.cache.get(cacheKey);
       }
 
       const response = await fetch(`${API_BASE_URL}/languages`);
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to get languages');
       }
@@ -328,7 +328,7 @@ class ApiService {
     if (sessionId) {
       this.sessionId = sessionId;
     }
-    
+
     try {
       const result = await this.chatWithKnowledgeBase(message, fileIds, maxResults, language);
       return result;

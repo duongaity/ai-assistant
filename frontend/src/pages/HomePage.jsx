@@ -6,7 +6,7 @@ import Footer from '../components/Footer';
 import HowToUse from '../components/HowToUse';
 import CodeEditor from '../components/CodeEditor';
 
-function HomePage({ 
+function HomePage({
   onNavigate,
   language,
   supportedLanguages,
@@ -23,12 +23,11 @@ function HomePage({
   setCode,
   error,
   commentedCode,
-  tokensInfo
 }) {
   return (
     <div className="page-container">
       <Header currentPage="home" onNavigate={onNavigate} />
-      
+
       <main className="app-main">
         <div className="controls">
           <div className="controls-left">
@@ -56,7 +55,7 @@ function HomePage({
                 style={{ display: 'none' }}
               />
               <button
-                onClick={() => fileInputRef && fileInputRef.click()}
+                onClick={() => fileInputRef && fileInputRef.current && fileInputRef.current.click()}
                 className="btn btn-secondary"
               >
                 📁 Upload File
@@ -79,7 +78,7 @@ function HomePage({
                   disabled={loading || !code.trim()}
                   title="Add detailed comments to code"
                 >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>💬</span>
+                  <span style={{ fontSize: '1rem', marginRight: '0.4rem' }}>💬</span>
                   Comment Code
                 </button>
                 <button
@@ -88,7 +87,7 @@ function HomePage({
                   disabled={loading || !code.trim()}
                   title="Find and fix bugs in code"
                 >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>🐛</span>
+                  <span style={{ fontSize: '1rem', marginRight: '0.4rem' }}>🐛</span>
                   Find Bugs
                 </button>
                 <button
@@ -97,8 +96,8 @@ function HomePage({
                   disabled={loading || !code.trim()}
                   title="Optimize code performance"
                 >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>⚡</span>
-                  Optimize
+                  <span style={{ fontSize: '1rem', marginRight: '0.4rem' }}>⚡</span>
+                  Optimize Code
                 </button>
                 <button
                   onClick={onGenerateTests}
@@ -106,7 +105,7 @@ function HomePage({
                   disabled={loading || !code.trim()}
                   title="Generate unit tests for code"
                 >
-                  <span style={{fontSize: '1rem', marginRight: '0.4rem'}}>🧪</span>
+                  <span style={{ fontSize: '1rem', marginRight: '0.4rem' }}>🧪</span>
                   Generate Tests
                 </button>
               </div>

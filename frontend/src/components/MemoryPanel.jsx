@@ -72,19 +72,6 @@ const MemoryPanel = ({ isVisible, onToggle }) => {
             <code>{sessionId}</code>
           </div>
           
-          {memoryStats && (
-            <div className="memory-stats">
-              <div className="stat">
-                <span className="label">Total Sessions:</span>
-                <span className="value">{memoryStats.total_sessions || 0}</span>
-              </div>
-              <div className="stat">
-                <span className="label">Active Sessions:</span>
-                <span className="value">{memoryStats.active_sessions || 0}</span>
-              </div>
-            </div>
-          )}
-
           <div className="session-actions">
             <button 
               onClick={() => setShowConfirmClear(true)}

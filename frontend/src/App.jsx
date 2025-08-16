@@ -1,8 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import React, { useState, useEffect, useRef } from 'react';
 import ChatAssistant from './components/ChatAssistant';
-import CodeEditor from './components/CodeEditor';
 import HomePage from './pages/HomePage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import LanguageSelector from './components/LanguageSelector';
@@ -19,7 +16,7 @@ function AppContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [supportedLanguages, setSupportedLanguages] = useState([]);
-  const [fileInputRef, setFileInputRef] = useState(null);
+  const fileInputRef = useRef(null);
   const [chatVisible, setChatVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => {
     // Check URL path to determine initial page
@@ -77,7 +74,7 @@ function AppContent() {
     const allowedExtensions = ['.txt', '.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.cpp', '.c', '.cs', '.php', '.rb', '.go', '.rs', '.swift', '.kt', '.scala', '.clj', '.sh', '.sql', '.html', '.css', '.json', '.xml', '.yaml', '.yml'];
     const fileName = file.name.toLowerCase();
     const isAllowed = allowedExtensions.some(ext => fileName.endsWith(ext));
-    
+
     if (!isAllowed) {
       setError('File format not supported. Please select a valid code file.');
       return;
@@ -90,7 +87,7 @@ function AppContent() {
       setCommentedCode('');
       setTokensInfo(null);
       setError('');
-      
+
       // Auto-detect language from file extension - Tự động phát hiện ngôn ngữ từ phần mở rộng file
       const ext = fileName.split('.').pop();
       const languageMap = {
@@ -114,26 +111,20 @@ function AppContent() {
         'sh': 'bash',
         'sql': 'sql'
       };
-      
+
       if (languageMap[ext]) {
         setLanguage(languageMap[ext]);
       }
     };
-    
+
     reader.onerror = () => {
       setError('Cannot read file. Please try again.');
     };
-    
+
     reader.readAsText(file);
-    
+
     // Reset input value to allow selecting the same file again - Reset giá trị input để cho phép chọn lại cùng file
     event.target.value = '';
-  };
-
-  const triggerFileUpload = () => {
-    if (fileInputRef) {
-      fileInputRef.click();
-    }
   };
 
   const toggleChat = () => {
@@ -161,7 +152,7 @@ function AppContent() {
     try {
       // Debug log để kiểm tra ngôn ngữ
       console.log('Quick Action - System language:', systemLanguage);
-      
+
       const response = await apiService.chatWithAI(message, [], true, systemLanguage);
 
       if (response.success) {
@@ -180,26 +171,26 @@ function AppContent() {
   };
 
   const handleCommentCode = () => {
-    const prompt = systemLanguage === 'vi' 
+    const prompt = systemLanguage === 'vi'
       ? 'Thêm comment chi tiết bằng tiếng Việt vào code này, giải thích từng phần làm gì:'
       : 'Add detailed comments in English to this code, explain what each part does:';
     handleQuickAction('comment', prompt);
   };
-  
+
   const handleFindBugs = () => {
     const prompt = systemLanguage === 'vi'
       ? 'Tìm và sửa lỗi trong code này:'
       : 'Find and fix bugs in this code:';
     handleQuickAction('debug', prompt);
   };
-  
+
   const handleOptimize = () => {
     const prompt = systemLanguage === 'vi'
       ? 'Tối ưu hiệu suất của code này:'
       : 'Optimize the performance of this code:';
     handleQuickAction('optimize', prompt);
   };
-  
+
   const handleGenerateTests = () => {
     const prompt = systemLanguage === 'vi'
       ? 'Tạo unit test cho code này:'
@@ -290,8 +281,8 @@ function AppContent() {
 
         {/* Chat Assistant Sidebar - Only show on home page */}
         {currentPage === 'home' && (
-          <ChatAssistant 
-            isVisible={chatVisible} 
+          <ChatAssistant
+            isVisible={chatVisible}
             onToggle={toggleChat}
             currentCode={code}
             currentLanguage={language}

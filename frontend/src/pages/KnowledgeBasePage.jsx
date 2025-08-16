@@ -40,20 +40,20 @@ function KnowledgeBasePage({ onNavigate }) {
 
   // Use session context
   const { sessionId, searchHistory, addToSearchHistory } = useSession();
-  
+
   // Use language context
   const { language } = useLanguage();
 
   // State + ref để điều khiển audio TTS
   const [audioPlayingIndex, setAudioPlayingIndex] = useState(null);
   const audioRef = useRef(null);
-  
+
   // Load danh sách files khi component mount
   React.useEffect(() => {
     loadAvailableFiles();
   }, []);
 
-    // Hàm play/pause TTS cho message index
+  // Hàm play/pause TTS cho message index
   const handlePlayTTS = async (text, index) => {
     if (audioPlayingIndex === index) {
       // Đang phát, bấm lại để dừng
@@ -66,7 +66,7 @@ function KnowledgeBasePage({ onNavigate }) {
 
     try {
       console.log('Starting TTS for text:', text.substring(0, 50) + '...');
-      
+
       const response = await apiService.textToSpeech(text);
 
       console.log('TTS API response:', response);
@@ -76,19 +76,19 @@ function KnowledgeBasePage({ onNavigate }) {
         const mimeType = response.data.mimeType || 'audio/wav';
         console.log('Audio base64 length:', audioBase64.length);
         console.log('Audio MIME type:', mimeType);
-        
+
         const audioBlob = base64ToBlob(audioBase64, mimeType);
         console.log('Audio blob size:', audioBlob.size, 'type:', audioBlob.type);
-        
+
         const audioUrl = URL.createObjectURL(audioBlob);
         console.log('Audio URL created:', audioUrl);
-        
+
         if (audioRef.current) {
           // Clean up previous audio
           if (audioRef.current.src) {
             URL.revokeObjectURL(audioRef.current.src);
           }
-          
+
           audioRef.current.src = audioUrl;
           audioRef.current.onloadeddata = () => {
             console.log('Audio loaded successfully, duration:', audioRef.current.duration);
@@ -97,14 +97,14 @@ function KnowledgeBasePage({ onNavigate }) {
             console.error('Audio load error:', e);
             console.error('Audio error details:', audioRef.current.error);
           };
-          
+
           try {
             await audioRef.current.play();
             setAudioPlayingIndex(index);
             console.log('Audio playing started');
           } catch (playError) {
             console.error('Audio play error:', playError);
-            
+
             // Try alternative approach with HTML5 Audio API
             try {
               const audio = new Audio();
@@ -153,7 +153,7 @@ function KnowledgeBasePage({ onNavigate }) {
         'text/markdown',
         'text/plain'
       ];
-      
+
       if (allowedTypes.includes(file.type) || file.name.endsWith('.md')) {
         setUploadedFile(file);
       } else {
@@ -182,7 +182,7 @@ function KnowledgeBasePage({ onNavigate }) {
           content: `Great! I've received the file "${uploadedFile.name}" with ID: ${response.data.file_id}. You can now ask me about the content of this file.`
         };
         setMessages(prev => [...prev, newMessage]);
-        
+
         // Reset uploaded file và reload available files
         setUploadedFile(null);
         document.getElementById('file-upload').value = '';
@@ -210,22 +210,22 @@ function KnowledgeBasePage({ onNavigate }) {
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
-    
+
     const userMessage = {
       id: Date.now(),
       type: 'user',
       content: inputMessage
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
     const currentInput = inputMessage;
     setInputMessage('');
     setIsLoading(true);
-    
+
     try {
       // Debug log để kiểm tra ngôn ngữ
       console.log('Current language:', language);
-      
+
       // Use apiService with session support
       const response = await apiService.knowledgeBaseChat(
         currentInput,
@@ -283,7 +283,7 @@ function KnowledgeBasePage({ onNavigate }) {
   return (
     <div className="page-container">
       <Header currentPage="knowledge-base" onNavigate={onNavigate} />
-      
+
       <main className="knowledge-base-main">
         <div className="knowledge-base-container">
           {/* Left Panel - File Management */}
@@ -307,8 +307,8 @@ function KnowledgeBasePage({ onNavigate }) {
                     {uploadedFile ? uploadedFile.name : 'No file selected'}
                   </div>
                   {uploadedFile && (
-                    <button 
-                      className="upload-button" 
+                    <button
+                      className="upload-button"
                       onClick={handleUploadClick}
                       disabled={uploading}
                     >
@@ -325,24 +325,24 @@ function KnowledgeBasePage({ onNavigate }) {
               {availableFiles && availableFiles.length > 0 ? (
                 <div className="file-list">
                   <div className="select-all-controls">
-                    <button 
+                    <button
                       className="select-button"
                       onClick={() => setSelectedFiles(availableFiles?.map(file => file.file_id) || [])}
                     >
                       Select All
                     </button>
-                    <button 
+                    <button
                       className="select-button"
                       onClick={() => setSelectedFiles([])}
                     >
                       Deselect All
                     </button>
                   </div>
-                  
+
                   <div className="files-list">
                     {availableFiles && availableFiles.map((file) => (
-                      <div 
-                        key={file.file_id} 
+                      <div
+                        key={file.file_id}
                         className={`file-item ${selectedFiles.includes(file.file_id) ? 'selected' : ''}`}
                         onClick={() => handleFileSelection(file.file_id)}
                       >
@@ -389,7 +389,7 @@ function KnowledgeBasePage({ onNavigate }) {
                   </div>
                 </div>
                 <div className="chat-controls">
-                  <button 
+                  <button
                     onClick={() => setMemoryPanelVisible(!memoryPanelVisible)}
                     className={`memory-btn ${memoryPanelVisible ? 'active' : ''}`}
                     title="Memory & Sessions"
@@ -398,7 +398,7 @@ function KnowledgeBasePage({ onNavigate }) {
                   </button>
                 </div>
               </div>
-              
+
               <div className="chat-container">
                 <div className="chat-messages">
                   {messages.map((message, index) => (
@@ -453,7 +453,7 @@ function KnowledgeBasePage({ onNavigate }) {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="chat-input">
                   <div className="input-container">
                     <textarea
@@ -464,8 +464,8 @@ function KnowledgeBasePage({ onNavigate }) {
                       rows="3"
                       disabled={isLoading}
                     />
-                    <button 
-                      onClick={handleSendMessage} 
+                    <button
+                      onClick={handleSendMessage}
                       disabled={!inputMessage.trim() || isLoading}
                       className="send-button"
                     >
@@ -478,15 +478,15 @@ function KnowledgeBasePage({ onNavigate }) {
           </div>
         </div>
       </main>
-      
+
       <Footer />
-      
+
       {/* Memory Panel */}
-      <MemoryPanel 
+      <MemoryPanel
         isVisible={memoryPanelVisible}
         onToggle={() => setMemoryPanelVisible(!memoryPanelVisible)}
       />
-      
+
       {/* Thẻ audio ẩn dùng để phát TTS */}
       <audio
         ref={audioRef}

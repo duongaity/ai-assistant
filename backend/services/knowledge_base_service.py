@@ -16,7 +16,7 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 import PyPDF2
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 
 # Langchain imports
 from langchain.schema import Document

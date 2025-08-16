@@ -574,7 +574,3 @@ This code performs simple addition."""
                 "success": False,
                 "error": f"Error processing chat: {str(e)}"
             }
-
-    # =========================================
-    # END OF AI SERVICE - ONLY SINGLE CHAT SUPPORT
-    # =========================================

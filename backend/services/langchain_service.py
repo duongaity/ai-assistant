@@ -15,8 +15,8 @@ from dotenv import load_dotenv
 # Langchain imports
 from langchain.chains import ConversationalRetrievalChain, LLMChain
 from langchain.memory import ConversationBufferMemory
-from langchain.prompts import PromptTemplate, ChatPromptTemplate
-from langchain.schema import BaseRetriever, Document
+from langchain.prompts import PromptTemplate
+from langchain.schema import Document
 from langchain.tools import Tool
 from langchain.agents import initialize_agent, AgentType
 
@@ -323,7 +323,7 @@ Please provide clean, well-commented code with explanations.
     # PUBLIC METHODS
     # ================================
     
-    def chat_with_rag(self, question: str, chat_history: List = None, session_id: str = None) -> Dict[str, Any]:
+    def chat_with_rag(self, question: str, chat_history: List = None, session_id: str = None, system_language: str = 'en') -> Dict[str, Any]:
         """
         Chat với knowledge base sử dụng RAG với memory support
         
@@ -331,6 +331,7 @@ Please provide clean, well-commented code with explanations.
             question: Câu hỏi từ user
             chat_history: Lịch sử chat (optional)  
             session_id: Session ID để quản lý memory riêng biệt
+            system_language: Ngôn ngữ hệ thống ('en' hoặc 'vi')
             
         Returns:
             dict: Response với answer, source documents và search history
@@ -349,10 +350,44 @@ Please provide clean, well-commented code with explanations.
             # Tạo messages từ memory và question hiện tại
             messages = []
             
+            # Tạo system message dựa trên ngôn ngữ
+            if system_language == 'vi':
+                system_content = """Bạn là một AI Assistant thông minh và hữu ích, chuyên về lập trình và công nghệ. 
+
+Nhiệm vụ của bạn:
+- Trả lời câu hỏi về lập trình, debug code, giải thích thuật toán
+- Hỗ trợ viết code, tối ưu hóa và review code  
+- Giải thích các khái niệm công nghệ một cách dễ hiểu
+- Hướng dẫn best practices trong lập trình
+- Trả lời các câu hỏi tổng quát khác
+
+Phong cách trả lời:
+- Thân thiện, nhiệt tình và chuyên nghiệp
+- Giải thích rõ ràng, có ví dụ cụ thể
+- Sử dụng emoji phù hợp để tạo không khí vui vẻ
+- Trả lời bằng tiếng Việt
+- Khi giải thích code, sử dụng markdown code blocks với syntax highlighting"""
+            else:
+                system_content = """You are an intelligent and helpful AI Assistant specializing in programming and technology.
+
+Your tasks:
+- Answer programming questions, debug code, explain algorithms
+- Help write code, optimize and review code
+- Explain technology concepts in an easy-to-understand way
+- Guide best practices in programming
+- Answer other general questions
+
+Response style:
+- Friendly, enthusiastic and professional
+- Clear explanations with specific examples
+- Use appropriate emojis to create a pleasant atmosphere
+- Respond in English
+- When explaining code, use markdown code blocks with syntax highlighting"""
+            
             # Thêm system message
             messages.append({
                 "role": "system",
-                "content": "Bạn là một AI assistant thông minh. Hãy trả lời câu hỏi dựa trên thông tin được cung cấp."
+                "content": system_content
             })
             
             # Thêm chat history từ memory nếu có
@@ -401,7 +436,7 @@ Please provide clean, well-commented code with explanations.
                 "error": f"Error in RAG chat: {str(e)}"
             }
     
-    def process_code_with_langchain(self, task: str, code: str, language: str) -> Dict[str, Any]:
+    def process_code_with_langchain(self, task: str, code: str, language: str, system_language: str = 'en') -> Dict[str, Any]:
         """
         Xử lý code sử dụng Langchain
         
@@ -409,17 +444,21 @@ Please provide clean, well-commented code with explanations.
             task: Loại task (comment, fix_bugs, optimize, etc.)
             code: Source code
             language: Programming language
+            system_language: Ngôn ngữ hệ thống ('en' hoặc 'vi')
             
         Returns:
             dict: Processed result
         """
         try:
+            # Debug log để kiểm tra tham số
+            print(f"Langchain Service - process_code_with_langchain: task={task}, language={language}, system_language={system_language}")
+            
             if not self.code_chain:
                 return {
                     "success": False,
                     "error": "Code chain not available"
                 }
-            
+
             result = self.code_chain.run(
                 task=task,
                 code=code,
