@@ -14,6 +14,7 @@ export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState('en'); // Mặc định tiếng Anh
 
   const changeLanguage = (newLanguage) => {
+    console.log('Changing language to:', newLanguage);
     setLanguage(newLanguage);
     // Có thể lưu vào localStorage để persist
     localStorage.setItem('app_language', newLanguage);
@@ -22,10 +23,17 @@ export const LanguageProvider = ({ children }) => {
   // Load language từ localStorage khi khởi tạo
   React.useEffect(() => {
     const savedLanguage = localStorage.getItem('app_language');
+    console.log('Saved language from localStorage:', savedLanguage);
     if (savedLanguage && ['en', 'vi'].includes(savedLanguage)) {
       setLanguage(savedLanguage);
     }
+    console.log('Current language state:', language);
   }, []);
+
+  // Debug log khi language thay đổi
+  React.useEffect(() => {
+    console.log('Language updated to:', language);
+  }, [language]);
 
   const value = {
     language,

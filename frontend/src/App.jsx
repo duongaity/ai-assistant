@@ -7,11 +7,11 @@ import HomePage from './pages/HomePage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import LanguageSelector from './components/LanguageSelector';
 import { SessionProvider } from './components/SessionManager';
-import { LanguageProvider } from './contexts/LanguageContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import apiService from './services/apiService';
 import './App.css';
 
-function App() {
+function AppContent() {
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('java');
   const [commentedCode, setCommentedCode] = useState('');
@@ -29,6 +29,9 @@ function App() {
     }
     return 'home';
   }); // Add page state
+
+  // Use language context
+  const { language: systemLanguage } = useLanguage();
 
   useEffect(() => {
     // Fetch supported languages
@@ -156,7 +159,10 @@ function App() {
     const message = `${prompt}\n\n\`\`\`${language}\n${code}\n\`\`\``;
 
     try {
-      const response = await apiService.chatWithAI(message, [], true);
+      // Debug log để kiểm tra ngôn ngữ
+      console.log('Quick Action - System language:', systemLanguage);
+      
+      const response = await apiService.chatWithAI(message, [], true, systemLanguage);
 
       if (response.success) {
         setCommentedCode(response.response); // Fix: response.response thay vì response.data.response
@@ -173,10 +179,33 @@ function App() {
     }
   };
 
-  const handleCommentCode = () => handleQuickAction('comment', 'Add detailed comments in Vietnamese to this code, explain what each part does:');
-  const handleFindBugs = () => handleQuickAction('debug', 'Find and fix bugs in this code:');
-  const handleOptimize = () => handleQuickAction('optimize', 'Optimize the performance of this code:');
-  const handleGenerateTests = () => handleQuickAction('test', 'Generate unit tests for this code:');
+  const handleCommentCode = () => {
+    const prompt = systemLanguage === 'vi' 
+      ? 'Thêm comment chi tiết bằng tiếng Việt vào code này, giải thích từng phần làm gì:'
+      : 'Add detailed comments in English to this code, explain what each part does:';
+    handleQuickAction('comment', prompt);
+  };
+  
+  const handleFindBugs = () => {
+    const prompt = systemLanguage === 'vi'
+      ? 'Tìm và sửa lỗi trong code này:'
+      : 'Find and fix bugs in this code:';
+    handleQuickAction('debug', prompt);
+  };
+  
+  const handleOptimize = () => {
+    const prompt = systemLanguage === 'vi'
+      ? 'Tối ưu hiệu suất của code này:'
+      : 'Optimize the performance of this code:';
+    handleQuickAction('optimize', prompt);
+  };
+  
+  const handleGenerateTests = () => {
+    const prompt = systemLanguage === 'vi'
+      ? 'Tạo unit test cho code này:'
+      : 'Generate unit tests for this code:';
+    handleQuickAction('test', prompt);
+  };
 
   // Navigation handlers
   const navigateToHome = () => {
@@ -241,13 +270,12 @@ function App() {
   };
 
   return (
-    <LanguageProvider>
-      <SessionProvider>
-        <div className="App">
-          {/* Display Language Selector - Fixed position on left */}
-          <LanguageSelector />
+    <SessionProvider>
+      <div className="App">
+        {/* Display Language Selector - Fixed position on left */}
+        <LanguageSelector />
 
-          {renderContent()}
+        {renderContent()}
 
         {/* Floating Chat Button - Only show on home page */}
         {currentPage === 'home' && (
@@ -272,6 +300,13 @@ function App() {
         )}
       </div>
     </SessionProvider>
+  );
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
     </LanguageProvider>
   );
 }

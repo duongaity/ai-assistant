@@ -808,6 +808,9 @@ def chat_with_knowledge_base():
         file_ids = data.get('file_ids', None)
         language = data.get('language', 'en')  # Thêm ngôn ngữ hệ thống
         
+        # Debug log để kiểm tra tham số nhận được
+        print(f"Knowledge Base API - Language: {language}, Message: {message[:50]}...")
+        
         # Bước 2: Tìm kiếm trong knowledge base
         import time
         search_start = time.time()

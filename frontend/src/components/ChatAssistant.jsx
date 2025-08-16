@@ -83,6 +83,9 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
     setError('');
 
     try {
+      // Debug log để kiểm tra ngôn ngữ
+      console.log('Current language:', language);
+      
       // Use apiService with session support (no need to send message history)
       const response = await apiService.chatWithAI(
         finalMessage,

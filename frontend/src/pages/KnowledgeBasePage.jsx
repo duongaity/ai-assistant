@@ -223,6 +223,9 @@ function KnowledgeBasePage({ onNavigate }) {
     setIsLoading(true);
     
     try {
+      // Debug log để kiểm tra ngôn ngữ
+      console.log('Current language:', language);
+      
       // Use apiService with session support
       const response = await apiService.knowledgeBaseChat(
         currentInput,

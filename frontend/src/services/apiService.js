@@ -47,18 +47,23 @@ class ApiService {
    */
   async chatWithAI(message, history = [], isQuickAction = false, language = 'en') {
     try {
+      const requestBody = {
+        message,
+        history, // Vẫn gửi history cho backward compatibility
+        is_quick_action: isQuickAction,
+        session_id: this.sessionId, // Thêm session ID
+        language: language // Thêm ngôn ngữ hệ thống
+      };
+      
+      // Debug log để kiểm tra payload
+      console.log('API Request payload:', requestBody);
+      
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message,
-          history, // Vẫn gửi history cho backward compatibility
-          is_quick_action: isQuickAction,
-          session_id: this.sessionId, // Thêm session ID
-          language: language // Thêm ngôn ngữ hệ thống
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
@@ -89,6 +94,9 @@ class ApiService {
       if (fileIds && fileIds.length > 0) {
         requestBody.file_ids = fileIds;
       }
+
+      // Debug log để kiểm tra payload
+      console.log('Knowledge Base API Request payload:', requestBody);
 
       const response = await fetch(`${API_BASE_URL}/knowledge-base/chat`, {
         method: 'POST',

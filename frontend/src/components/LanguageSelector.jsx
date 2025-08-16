@@ -6,6 +6,7 @@ const LanguageSelector = () => {
     const { language, changeLanguage } = useLanguage();
 
     const handleLanguageChange = (selectedLanguage) => {
+        console.log('LanguageSelector: Changing language to:', selectedLanguage);
         changeLanguage(selectedLanguage);
     };
 
