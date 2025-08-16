@@ -4,7 +4,7 @@
  * Hiển thị thông tin session memory và search history
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useSession } from './SessionManager';
 import './MemoryPanel.css';
 
@@ -18,6 +18,8 @@ const MemoryPanel = ({ isVisible, onToggle }) => {
     clearSearchHistory,
     loadMemoryStats
   } = useSession();
+
+  const panelRef = useRef(null);
 
   const [showConfirmClear, setShowConfirmClear] = useState(false);
 
@@ -55,10 +57,27 @@ const MemoryPanel = ({ isVisible, onToggle }) => {
     }
   };
 
+    // Handle click outside to close panel
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target) && isVisible) {
+        onToggle();
+      }
+    };
+
+    if (isVisible) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isVisible, onToggle]);
+
   if (!isVisible) return null;
 
   return (
-    <div className="memory-panel">
+    <div className="memory-panel" ref={panelRef}>
       <div className="memory-header">
         <h3>🧠 Memory & Sessions</h3>
         <button onClick={onToggle} className="close-btn">✕</button>

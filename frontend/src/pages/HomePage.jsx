@@ -78,7 +78,7 @@ function HomePage({
                   disabled={loading || !code.trim()}
                   title="Add detailed comments to code"
                 >
-                  <span style={{ fontSize: '1rem', marginRight: '0.4rem' }}>💬</span>
+                  <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>💬</span>
                   Comment Code
                 </button>
                 <button
@@ -87,7 +87,7 @@ function HomePage({
                   disabled={loading || !code.trim()}
                   title="Find and fix bugs in code"
                 >
-                  <span style={{ fontSize: '1rem', marginRight: '0.4rem' }}>🐛</span>
+                  <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>🐛</span>
                   Find Bugs
                 </button>
                 <button
@@ -96,7 +96,7 @@ function HomePage({
                   disabled={loading || !code.trim()}
                   title="Optimize code performance"
                 >
-                  <span style={{ fontSize: '1rem', marginRight: '0.4rem' }}>⚡</span>
+                  <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>⚡</span>
                   Optimize Code
                 </button>
                 <button
@@ -105,7 +105,7 @@ function HomePage({
                   disabled={loading || !code.trim()}
                   title="Generate unit tests for code"
                 >
-                  <span style={{ fontSize: '1rem', marginRight: '0.4rem' }}>🧪</span>
+                  <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>🧪</span>
                   Generate Tests
                 </button>
               </div>

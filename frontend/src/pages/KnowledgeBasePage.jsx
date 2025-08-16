@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import HowToUse from '../components/HowToUse';
 import MessageContent from '../components/MessageContent';
 import MemoryPanel from '../components/MemoryPanel';
 import { useSession } from '../components/SessionManager';
@@ -479,6 +480,8 @@ function KnowledgeBasePage({ onNavigate }) {
         </div>
       </main>
 
+      <HowToUse type="knowledge-base" />
+      
       <Footer />
 
       {/* Memory Panel */}

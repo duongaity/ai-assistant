@@ -11,6 +11,7 @@
 .knowledge-base-container {
   width: 100%;
   margin: 0 auto;
+  margin-bottom: 40px;
   height: 100%;
   display: grid;
   grid-template-columns: 400px minmax(600px, 1fr);

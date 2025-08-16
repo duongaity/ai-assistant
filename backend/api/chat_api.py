@@ -134,9 +134,6 @@ def chat():
         session_id = data.get('session_id', None)           # Session ID để maintain memory across requests
         language = data.get('language', 'en')               # Ngôn ngữ hệ thống (en/vi), mặc định tiếng Anh
         
-        # Debug log để kiểm tra tham số nhận được
-        print(f"Chat API - Language: {language}, Message: {message[:50]}...")
-        
         if not message.strip():
             return jsonify({
                 "success": False,
