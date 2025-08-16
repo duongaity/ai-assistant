@@ -157,25 +157,6 @@ function HomePage({
             )}
           </div>
         </div>
-
-        {commentedCode && (
-          <div className="stats">
-            {tokensInfo && (
-              <div className="stats-row">
-                <p>
-                  📊 <strong>Tokens:</strong> 
-                  Input ~{tokensInfo.estimated_input_tokens} tokens | 
-                  Max allowed: {tokensInfo.max_tokens_used} tokens | 
-                  Output ~{tokensInfo.estimated_output_tokens} tokens
-                </p>
-                <p className="cost-estimate">
-                  💰 <strong>Cost estimate:</strong> 
-                  ~${((tokensInfo.estimated_input_tokens * 0.00015 + tokensInfo.estimated_output_tokens * 0.0006) / 1000).toFixed(4)} USD
-                </p>
-              </div>
-            )}
-          </div>
-        )}
       </main>
 
       <HowToUse />

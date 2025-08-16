@@ -4,6 +4,7 @@ import Footer from '../components/Footer';
 import MessageContent from '../components/MessageContent';
 import MemoryPanel from '../components/MemoryPanel';
 import { useSession } from '../components/SessionManager';
+import { useLanguage } from '../contexts/LanguageContext';
 import apiService from '../services/apiService';
 import './KnowledgeBasePage.css';
 
@@ -39,6 +40,9 @@ function KnowledgeBasePage({ onNavigate }) {
 
   // Use session context
   const { sessionId, searchHistory, addToSearchHistory } = useSession();
+  
+  // Use language context
+  const { language } = useLanguage();
 
   // State + ref để điều khiển audio TTS
   const [audioPlayingIndex, setAudioPlayingIndex] = useState(null);
@@ -224,7 +228,8 @@ function KnowledgeBasePage({ onNavigate }) {
         currentInput,
         selectedFiles,
         5, // max_results
-        sessionId
+        sessionId,
+        language // Thêm ngôn ngữ hệ thống
       );
 
       if (response.success) {

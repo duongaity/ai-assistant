@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import CodeBlock from './CodeBlock';
 import { parseMessageContent, detectLanguage, formatTextContent } from '../utils/messageParser';
 import { useSession } from './SessionManager';
+import { useLanguage } from '../contexts/LanguageContext';
 import apiService from '../services/apiService';
 import './ChatAssistant.css';
 
@@ -17,6 +18,9 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
 
   // Use session context
   const { sessionId, addToSearchHistory } = useSession();
+  
+  // Use language context
+  const { language } = useLanguage();
 
   // Auto scroll to bottom - Tự động cuộn xuống cuối
   useEffect(() => {
@@ -80,10 +84,11 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
 
     try {
       // Use apiService with session support (no need to send message history)
-      const response = await apiService.chatWithSession(
+      const response = await apiService.chatWithAI(
         finalMessage,
-        sessionId,
-        isQuickAction
+        [], // Empty history since session is managed on backend
+        isQuickAction,
+        language // Thêm ngôn ngữ hệ thống
       );
 
       if (response.success) {

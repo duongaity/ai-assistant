@@ -45,7 +45,7 @@ class ApiService {
   /**
    * Chat với AI Assistant với session memory
    */
-  async chatWithAI(message, history = [], isQuickAction = false) {
+  async chatWithAI(message, history = [], isQuickAction = false, language = 'en') {
     try {
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
@@ -56,7 +56,8 @@ class ApiService {
           message,
           history, // Vẫn gửi history cho backward compatibility
           is_quick_action: isQuickAction,
-          session_id: this.sessionId // Thêm session ID
+          session_id: this.sessionId, // Thêm session ID
+          language: language // Thêm ngôn ngữ hệ thống
         })
       });
 
@@ -76,12 +77,13 @@ class ApiService {
   /**
    * Chat với Knowledge Base với memory support
    */
-  async chatWithKnowledgeBase(message, fileIds = null, maxResults = 3) {
+  async chatWithKnowledgeBase(message, fileIds = null, maxResults = 3, language = 'en') {
     try {
       const requestBody = {
         message,
         session_id: this.sessionId,
-        max_results: maxResults
+        max_results: maxResults,
+        language: language // Thêm ngôn ngữ hệ thống
       };
 
       if (fileIds && fileIds.length > 0) {
@@ -312,7 +314,7 @@ class ApiService {
     return this.getUploadedFiles();
   }
 
-  async knowledgeBaseChat(message, fileIds = null, maxResults = 3, sessionId = null) {
+  async knowledgeBaseChat(message, fileIds = null, maxResults = 3, sessionId = null, language = 'en') {
     // Use provided sessionId or fall back to current session
     const oldSessionId = this.sessionId;
     if (sessionId) {
@@ -320,7 +322,7 @@ class ApiService {
     }
     
     try {
-      const result = await this.chatWithKnowledgeBase(message, fileIds, maxResults);
+      const result = await this.chatWithKnowledgeBase(message, fileIds, maxResults, language);
       return result;
     } finally {
       // Restore original sessionId

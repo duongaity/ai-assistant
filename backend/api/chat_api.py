@@ -132,6 +132,7 @@ def chat():
         history = data.get('history', [])                    # Lịch sử trò chuyện để duy trì ngữ cảnh
         is_quick_action = data.get('is_quick_action', False) # Cờ để phân biệt hành động nhanh vs trò chuyện thông thường
         session_id = data.get('session_id', None)           # Session ID để maintain memory across requests
+        language = data.get('language', 'en')               # Ngôn ngữ hệ thống (en/vi), mặc định tiếng Anh
         
         if not message.strip():
             return jsonify({
@@ -144,7 +145,8 @@ def chat():
             message=message,
             history=history,
             is_quick_action=is_quick_action,
-            session_id=session_id
+            session_id=session_id,
+            language=language
         )
         
         # Bước 3: Trả về phản hồi

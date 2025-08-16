@@ -5,7 +5,9 @@ import ChatAssistant from './components/ChatAssistant';
 import CodeEditor from './components/CodeEditor';
 import HomePage from './pages/HomePage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
+import LanguageSelector from './components/LanguageSelector';
 import { SessionProvider } from './components/SessionManager';
+import { LanguageProvider } from './contexts/LanguageContext';
 import apiService from './services/apiService';
 import './App.css';
 
@@ -154,7 +156,7 @@ function App() {
     const message = `${prompt}\n\n\`\`\`${language}\n${code}\n\`\`\``;
 
     try {
-      const response = await apiService.chatWithSession(message, null, true);
+      const response = await apiService.chatWithAI(message, [], true);
 
       if (response.success) {
         setCommentedCode(response.response); // Fix: response.response thay vì response.data.response
@@ -239,9 +241,13 @@ function App() {
   };
 
   return (
-    <SessionProvider>
-      <div className="App">
-        {renderContent()}
+    <LanguageProvider>
+      <SessionProvider>
+        <div className="App">
+          {/* Display Language Selector - Fixed position on left */}
+          <LanguageSelector />
+
+          {renderContent()}
 
         {/* Floating Chat Button - Only show on home page */}
         {currentPage === 'home' && (
@@ -266,6 +272,7 @@ function App() {
         )}
       </div>
     </SessionProvider>
+    </LanguageProvider>
   );
 }
 

@@ -806,6 +806,7 @@ def chat_with_knowledge_base():
         session_id = data.get('session_id', None)
         max_results = data.get('max_results', 3)
         file_ids = data.get('file_ids', None)
+        language = data.get('language', 'en')  # Thêm ngôn ngữ hệ thống
         
         # Bước 2: Tìm kiếm trong knowledge base
         import time
@@ -876,7 +877,9 @@ Bạn có thể upload file PDF chứa thông tin bạn cần thông qua trang K
         context = "\n\n".join(context_parts)
         
         # Bước 5: Tạo prompt cho AI
-        ai_prompt = f"""Bạn là một AI Assistant thông minh và thân thiện. Hãy trả lời câu hỏi của người dùng CHÍNH XÁC dựa trên thông tin từ các tài liệu được cung cấp.
+        # Bước 5: Tạo prompt cho AI với thông tin từ knowledge base
+        if language == 'vi':
+            ai_prompt = f"""Bạn là một AI Assistant thông minh và thân thiện. Hãy trả lời câu hỏi của người dùng CHÍNH XÁC dựa trên thông tin từ các tài liệu được cung cấp.
 
 Câu hỏi: {message}
 
@@ -899,6 +902,30 @@ Hãy trả lời một cách tự nhiên, thân thiện và dễ hiểu. Sử d�
 Sử dụng tiếng Việt.
 
 Câu trả lời:"""
+        else:
+            ai_prompt = f"""You are an intelligent and friendly AI Assistant. Please answer the user's question ACCURATELY based on the information from the provided documents.
+
+Question: {message}
+
+Information from documents:
+{context}
+
+**IMPORTANT - RESPONSE RULES:**
+- ONLY answer based on information available in the documents provided above
+- DO NOT fabricate, speculate, or add information not present in the documents
+- If information is insufficient or not available in the documents, clearly state "This information is not available in the provided documents"
+- When citing information, mention the specific source (e.g., "According to document X...")
+
+Please respond naturally, friendly, and clearly. Use markdown formatting for better presentation:
+- Use **bold** for important keywords
+- Use `code` for technical terms
+- Break into short, easy-to-read paragraphs
+- Use bullet points (•) or numbered lists when listing items
+- Add appropriate emojis to make it engaging (📝, 💡, ⚠️, ✅, etc.)
+
+Use English.
+
+Answer:"""
 
         # Bước 6: Sử dụng AI service để tạo câu trả lời với Langchain memory
         from services.ai_service import AIService

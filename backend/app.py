@@ -24,11 +24,11 @@ from services.langchain_service import LangchainService
 from services.knowledge_base_service import KnowledgeBaseService
 
 # Import API modules
-from api.chat import chat_bp, init_chat_api
-from api.language import language_bp
-from api.health import health_bp, init_health_api
-from api.knowledge_base import knowledge_base_bp, init_knowledge_base_api
-from api.tts import tts_bp
+from api.chat_api import chat_bp, init_chat_api
+from api.language_api import language_bp
+from api.health_api import health_bp, init_health_api
+from api.knowledge_base_api import knowledge_base_bp, init_knowledge_base_api
+from api.tts_api import tts_bp
 
 # Load environment variables
 load_dotenv()

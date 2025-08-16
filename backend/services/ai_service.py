@@ -170,7 +170,7 @@ class AIService:
             }
         ]
     
-    def chat_with_ai(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, session_id: str = None) -> Dict[str, Any]:
+    def chat_with_ai(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, session_id: str = None, language: str = 'en') -> Dict[str, Any]:
         """
         Chat với AI sử dụng Langchain hoặc fallback to legacy với session support
         
@@ -179,18 +179,19 @@ class AIService:
             history: Lịch sử chat để maintain context
             is_quick_action: True nếu là quick action
             session_id: Session ID để maintain memory
+            language: Ngôn ngữ hệ thống ('en' hoặc 'vi')
             
         Returns:
             dict: Response từ AI hoặc error message
         """
         # Nếu có Langchain service, ưu tiên sử dụng
         if self.langchain_service:
-            return self._chat_with_langchain(message, history, is_quick_action, session_id)
+            return self._chat_with_langchain(message, history, is_quick_action, session_id, language)
         
         # Fallback to legacy implementation
-        return self._chat_with_legacy(message, history, is_quick_action)
+        return self._chat_with_legacy(message, history, is_quick_action, language)
     
-    def _chat_with_langchain(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, session_id: str = None) -> Dict[str, Any]:
+    def _chat_with_langchain(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, session_id: str = None, language: str = 'en') -> Dict[str, Any]:
         """
         Chat sử dụng Langchain service với session support
         """
@@ -200,7 +201,8 @@ class AIService:
                 result = self.langchain_service.process_code_with_langchain(
                     task=self._extract_task_from_message(message),
                     code=self._extract_code_from_message(message),
-                    language=self._detect_language_from_message(message)
+                    language=self._detect_language_from_message(message),
+                    system_language=language  # Thêm ngôn ngữ hệ thống
                 )
                 
                 if result["success"]:
@@ -212,14 +214,15 @@ class AIService:
                     }
                 else:
                     # Fallback to legacy if Langchain fails
-                    return self._chat_with_legacy(message, history, is_quick_action)
+                    return self._chat_with_legacy(message, history, is_quick_action, language)
             
             else:
                 # Normal chat với RAG capabilities và session memory
                 result = self.langchain_service.chat_with_rag(
                     question=message, 
                     chat_history=history,
-                    session_id=session_id
+                    session_id=session_id,
+                    system_language=language  # Thêm ngôn ngữ hệ thống
                 )
                 
                 if result["success"]:
@@ -274,7 +277,7 @@ class AIService:
             return 'javascript'
         else:
             return 'unknown'
-    def _chat_with_legacy(self, message: str, history: Optional[List] = None, is_quick_action: bool = False) -> Dict[str, Any]:
+    def _chat_with_legacy(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, language: str = 'en') -> Dict[str, Any]:
         """
         Legacy chat implementation (deprecated, dùng cho fallback)
         """
@@ -288,12 +291,11 @@ class AIService:
             # Bước 1: Tạo context messages dựa trên loại request
             context_messages = []
             
-            # Chọn system message phù hợp với từng mode
+            # Chọn system message phù hợp với từng mode và ngôn ngữ
             if is_quick_action:
                 # System message cho quick actions - chỉ trả về code thuần túy
-                context_messages.append({
-                    "role": "system",
-                    "content": """Bạn là một AI Assistant chuyên về lập trình. Khi nhận được yêu cầu từ Quick Action:
+                if language == 'vi':
+                    system_content = """Bạn là một AI Assistant chuyên về lập trình. Khi nhận được yêu cầu từ Quick Action:
 
 QUAN TRỌNG: CHỈ TRẢ VỀ CODE ĐÃ XỬ LÝ, KHÔNG GIẢI THÍCH THÊM!
 
@@ -312,12 +314,35 @@ Format trả về:
 
 Ví dụ Input: "Hãy thêm comment chi tiết vào code này: [code]"
 Ví dụ Output: [code đã được comment, không có gì khác]"""
+                else:
+                    system_content = """You are a programming AI Assistant. When receiving Quick Action requests:
+
+IMPORTANT: ONLY RETURN PROCESSED CODE, NO ADDITIONAL EXPLANATIONS!
+
+Processing rules:
+- Comment Code: Add detailed comments to code in English, return commented code
+- Find Bugs: Fix bugs in code, return fixed code  
+- Optimize: Optimize code, return optimized code
+- Generate Tests: Create unit tests, return test code
+
+Return format:
+- DO NOT include markdown (```language)
+- DO NOT explain or describe
+- ONLY pure processed code
+- Keep original code structure and format
+- Comments using standard format for language (// for Java/JS, # for Python, /* */ for block comments)
+
+Example Input: "Please add detailed comments to this code: [code]"
+Example Output: [commented code, nothing else]"""
+                
+                context_messages.append({
+                    "role": "system",
+                    "content": system_content
                 })
             else:
                 # System message cho chat thường - trả lời đầy đủ với giải thích
-                context_messages.append({
-                    "role": "system",
-                    "content": """Bạn là một AI Assistant thông minh và hữu ích, chuyên về lập trình và công nghệ. 
+                if language == 'vi':
+                    system_content = """Bạn là một AI Assistant thông minh và hữu ích, chuyên về lập trình và công nghệ. 
                     
 Nhiệm vụ của bạn:
 - Trả lời câu hỏi về lập trình, debug code, giải thích thuật toán
@@ -364,6 +389,58 @@ def add_numbers(a, b):
 ```
 
 Code này thực hiện phép cộng đơn giản."""
+                else:
+                    system_content = """You are an intelligent and helpful AI Assistant specializing in programming and technology.
+                    
+Your tasks:
+- Answer programming questions, debug code, explain algorithms
+- Help write code, optimize and review code
+- AUTOMATICALLY COMMENT CODE when users send code blocks
+- Explain technology concepts in an easy-to-understand way
+- Guide best practices in programming
+- Answer other general questions
+
+IMPORTANT - RESPONSE FORMAT:
+- USE markdown code blocks to wrap code: ```language
+- Always specify language for code blocks (```python, ```java, ```javascript, etc.)
+- Explanatory text uses plain format
+- Code blocks help frontend parse and highlight syntax
+
+Especially important - WHEN COMMENTING CODE:
+- Analyze code and add detailed English comments
+- Explain the purpose of each function/method
+- Add comments for complex logic
+- Use standard comment format for the language (/** */ for Java, # for Python, // for JS...)
+- Return fully commented code in markdown code block with language
+
+Response style:
+- Friendly, enthusiastic and professional
+- Clear explanations with specific examples
+- Use appropriate emojis to create a pleasant atmosphere
+- Respond in English (unless requested otherwise)
+- When explaining code, use markdown code blocks with syntax highlighting
+
+When users share code:
+- Analyze and explain each part
+- AUTOMATICALLY add comments to code
+- Point out strengths and potential improvements
+- Provide optimization suggestions if needed
+- Format code properly with ```language```
+
+Example format:
+Here is the commented Python code:
+
+```python
+# Function to add two numbers
+def add_numbers(a, b):
+    return a + b
+```
+
+This code performs simple addition."""
+                
+                context_messages.append({
+                    "role": "system",
+                    "content": system_content
                 })
 
             # Bước 2: Thêm lịch sử chat để maintain context (chỉ cho normal chat)
