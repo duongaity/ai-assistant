@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
 import CodeBlock from './CodeBlock';
 import { parseMessageContent, detectLanguage, formatTextContent } from '../utils/messageParser';
+import { useSession } from './SessionManager';
+import apiService from '../services/apiService';
 import './ChatAssistant.css';
-
-const API_BASE_URL = 'http://localhost:8888/api';
 
 const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onChatResult }) => {
   const [messages, setMessages] = useState([]);
@@ -15,6 +14,9 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
   const chatRef = useRef(null);
+
+  // Use session context
+  const { sessionId, addToSearchHistory } = useSession();
 
   // Auto scroll to bottom - Tự động cuộn xuống cuối
   useEffect(() => {
@@ -52,20 +54,17 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
   const handleSendMessage = async (messageText = inputMessage, isQuickAction = false) => {
     if (!messageText.trim() || loading) return;
 
-    // For manual chat input, include current file content if available - Cho chat thủ công, bao gồm nội dung file hiện tại nếu có
+    // For manual chat input, include current file content if available
     let finalMessage = messageText;
     if (!isQuickAction && currentCode && currentCode.trim()) {
-      // Add current code context for chat questions - Thêm context code hiện tại cho câu hỏi chat
       finalMessage = `${messageText}\n\nCurrent code for reference:\n\`\`\`${currentLanguage}\n${currentCode}\n\`\`\``;
     }
 
-    // For manual input (chat), always show in chat - Cho input thủ công (chat), luôn hiển thị trong chat
-    // For quick actions, don't show in chat but show loading message - Cho quick actions, không hiển thị trong chat nhưng hiển thị tin nhắn loading
+    // Add message to UI if not quick action
     if (!isQuickAction) {
       const userMessage = { type: 'user', content: messageText, timestamp: new Date() };
       setMessages(prev => [...prev, userMessage]);
     } else {
-      // For quick actions, add a temporary loading message to show progress - Cho quick actions, thêm tin nhắn loading tạm thời để hiển thị tiến trình
       const loadingMessage = { 
         type: 'bot', 
         content: '🔄 Processing your code...', 
@@ -80,37 +79,42 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
     setError('');
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/chat`, {
-        message: finalMessage, // Send message with context to API - Gửi tin nhắn với context đến API
-        history: messages.slice(-10), // Last 10 messages for context - 10 tin nhắn cuối để làm context
-        is_quick_action: isQuickAction // Add flag so backend knows this is quick action - Thêm flag để backend biết đây là quick action
-      });
+      // Use apiService with session support (no need to send message history)
+      const response = await apiService.chatWithSession(
+        finalMessage,
+        sessionId,
+        isQuickAction
+      );
 
-      if (response.data.success) {
-        // Quick actions always go to output - Quick actions luôn chuyển đến output
-        if (isQuickAction && onChatResult && response.data.response) {
-          // Remove the loading message for quick actions - Xóa tin nhắn loading cho quick actions
+      if (response.success) {
+        // Add to search history for tracking
+        addToSearchHistory({
+          query: messageText,
+          timestamp: new Date(),
+          type: isQuickAction ? 'quick_action' : 'chat'
+        });
+
+        if (isQuickAction && onChatResult && response.response) {
+          // Remove loading message and send to output
           setMessages(prev => prev.filter(msg => !msg.isQuickActionLoading));
-          onChatResult(response.data.response, response.data.tokens_info);
+          onChatResult(response.response, response.tokens_info);
         } else {
-          // Manual input always shows in chat - Input thủ công luôn hiển thị trong chat
+          // Show in chat
           const botMessage = {
             type: 'bot',
-            content: response.data.response,
+            content: response.response,
             timestamp: new Date()
           };
           setMessages(prev => [...prev, botMessage]);
         }
       } else {
-        // Remove loading message on error - Xóa tin nhắn loading khi có lỗi
         if (isQuickAction) {
           setMessages(prev => prev.filter(msg => !msg.isQuickActionLoading));
         }
-        setError(response.data.error || 'An error occurred');
+        setError(response.error || 'An error occurred');
       }
     } catch (err) {
       console.error('Chat error:', err);
-      // Remove loading message on error - Xóa tin nhắn loading khi có lỗi
       if (isQuickAction) {
         setMessages(prev => prev.filter(msg => !msg.isQuickActionLoading));
       }
@@ -147,6 +151,8 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
   const clearChat = () => {
     setMessages([]);
     setError('');
+    // Note: Session memory is not cleared here - only UI
+    // Use SessionManager to clear actual memory if needed
   };
 
   const renderMessage = (message, index) => {

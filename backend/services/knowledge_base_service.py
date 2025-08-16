@@ -1,11 +1,11 @@
 """
-Knowledge Base Service - Xử lý logic nghiệp vụ cho knowledge base
+Knowledge Base Service - Xử lý logic nghiệp vụ cho knowledge base với Langchain
 
 Service này chứa:
-- Xử lý upload file PDF
-- Trích xuất text từ PDF
-- Quản lý metadata
-- Validation file
+- Xử lý upload file PDF sử dụng Langchain DocumentLoaders
+- Trích xuất và split text với Langchain TextSplitters
+- Vector store operations với Langchain ChromaDB integration
+- Quản lý metadata với Langchain Document format
 """
 
 import os
@@ -15,9 +15,14 @@ import uuid
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import PyPDF2
-import chromadb
-from chromadb.config import Settings
 import re
+from typing import List, Dict, Any, Optional
+
+# Langchain imports
+from langchain.schema import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import SentenceTransformerEmbeddings
+from langchain_chroma import Chroma
 
 class KnowledgeBaseService:
     """
@@ -26,7 +31,7 @@ class KnowledgeBaseService:
     
     def __init__(self, upload_folder='uploads', chroma_db_path='./chroma_db'):
         """
-        Khởi tạo service
+        Khởi tạo service với Langchain integration
         
         Args:
             upload_folder: Thư mục lưu file upload
@@ -41,8 +46,41 @@ class KnowledgeBaseService:
         if not os.path.exists(self.upload_folder):
             os.makedirs(self.upload_folder)
         
-        # Khởi tạo ChromaDB client và collection
-        self._init_chroma_db()
+        # Khởi tạo Langchain components
+        self._init_langchain_components()
+    
+    def _init_langchain_components(self):
+        """
+        Khởi tạo các components của Langchain
+        """
+        try:
+            # Khởi tạo embeddings
+            self.embeddings = SentenceTransformerEmbeddings(
+                model_name="all-MiniLM-L6-v2"
+            )
+            
+            # Khởi tạo text splitter
+            self.text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=200,
+                length_function=len,
+                separators=['\n\n', '\n', '. ', '! ', '? ', '; ', ': ', ' ', '']
+            )
+            
+            # Khởi tạo Langchain ChromaDB vector store
+            self.vector_store = Chroma(
+                collection_name="knowledge_base",
+                embedding_function=self.embeddings,
+                persist_directory=self.chroma_db_path
+            )
+            
+            print("✅ Langchain components initialized successfully")
+            
+        except Exception as e:
+            print(f"❌ Error initializing Langchain components: {str(e)}")
+            self.embeddings = None
+            self.text_splitter = None
+            self.vector_store = None
     
     def is_allowed_file(self, filename):
         """
@@ -179,47 +217,43 @@ class KnowledgeBaseService:
     
     def _init_chroma_db(self):
         """
-        Khởi tạo ChromaDB client và collection
-        
-        Tạo connection đến ChromaDB và collection để lưu trữ vector embeddings
-        của text đã trích xuất từ PDF files
+        Deprecated - được thay thế bởi _init_langchain_components
         """
-        try:
-            # Tạo thư mục ChromaDB nếu chưa tồn tại
-            if not os.path.exists(self.chroma_db_path):
-                os.makedirs(self.chroma_db_path)
-            
-            # Khởi tạo ChromaDB client với persistent storage
-            self.chroma_client = chromadb.PersistentClient(path=self.chroma_db_path)
-            
-            # Tạo hoặc lấy collection cho knowledge base
-            # Collection này sẽ lưu trữ text chunks và metadata
-            self.collection = self.chroma_client.get_or_create_collection(
-                name="knowledge_base",
-                metadata={"description": "PDF document knowledge base with text chunks"}
-            )
-            
-            print(f"✅ ChromaDB initialized successfully at: {self.chroma_db_path}")
-            
-        except Exception as e:
-            print(f"❌ Error initializing ChromaDB: {str(e)}")
-            self.chroma_client = None
-            self.collection = None
+        print("⚠️ _init_chroma_db is deprecated, using Langchain components instead")
     
     def _split_text_into_chunks(self, text, chunk_size=1000, overlap=200):
         """
-        Chia text thành các chunks nhỏ để lưu vào vector database
-        Cải thiện để xử lý tiếng Việt tốt hơn
+        Chia text thành chunks sử dụng Langchain TextSplitter
         
         Args:
-            text: Text cần chia (tiếng Việt hoặc tiếng Anh)
-            chunk_size: Kích thước mỗi chunk (số ký tự)
-            overlap: Số ký tự overlap giữa các chunk
+            text: Text cần chia
+            chunk_size: Kích thước mỗi chunk
+            overlap: Overlap giữa các chunks
             
         Returns:
-            list: Danh sách các text chunks
+            List[str]: Danh sách các text chunks
         """
-        # Làm sạch text: loại bỏ ký tự xuống dòng thừa và khoảng trắng
+        try:
+            if not self.text_splitter:
+                # Fallback to basic splitting if text_splitter not available
+                return self._basic_text_split(text, chunk_size, overlap)
+            
+            # Sử dụng Langchain RecursiveCharacterTextSplitter
+            documents = [Document(page_content=text)]
+            split_docs = self.text_splitter.split_documents(documents)
+            
+            return [doc.page_content for doc in split_docs]
+            
+        except Exception as e:
+            print(f"❌ Error splitting text with Langchain: {str(e)}")
+            # Fallback to basic splitting
+            return self._basic_text_split(text, chunk_size, overlap)
+    
+    def _basic_text_split(self, text, chunk_size=1000, overlap=200):
+        """
+        Phương thức split text cơ bản làm fallback
+        """
+        # Làm sạch text
         cleaned_text = re.sub(r'\n+', '\n', text.strip())
         cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
         
@@ -230,15 +264,10 @@ class KnowledgeBaseService:
         start = 0
         
         while start < len(cleaned_text):
-            # Tính vị trí kết thúc chunk
             end = start + chunk_size
             
-            # Nếu chưa đến cuối text, tìm điểm ngắt tự nhiên (câu, đoạn)
             if end < len(cleaned_text):
-                # Tìm điểm ngắt gần nhất với ưu tiên cao cho tiếng Việt
-                # Thêm các dấu câu tiếng Việt
                 break_chars = ['. ', '\n', '! ', '? ', '; ', ': ', '.\n', '!\n', '?\n']
-                
                 best_break = -1
                 for break_char in break_chars:
                     break_pos = cleaned_text.rfind(break_char, start, end)
@@ -246,7 +275,6 @@ class KnowledgeBaseService:
                         best_break = break_pos + len(break_char)
                         break
                 
-                # Nếu không tìm thấy dấu câu, tìm khoảng trắng gần cuối chunk
                 if best_break == -1:
                     space_pos = cleaned_text.rfind(' ', start, end)
                     if space_pos != -1 and space_pos > start + chunk_size * 0.7:
@@ -255,15 +283,12 @@ class KnowledgeBaseService:
                 if best_break != -1:
                     end = best_break
             
-            # Lấy chunk text
             chunk = cleaned_text[start:end].strip()
-            if chunk:  # Chỉ thêm chunk không rỗng
+            if chunk:
                 chunks.append(chunk)
             
-            # Di chuyển start position với overlap
             start = max(start + 1, end - overlap)
             
-            # Tránh infinite loop
             if start >= len(cleaned_text):
                 break
         
@@ -271,7 +296,7 @@ class KnowledgeBaseService:
     
     def save_to_vector_db(self, file_id, title, description, extracted_text, metadata):
         """
-        Lưu text đã trích xuất vào ChromaDB vector database
+        Lưu text vào Langchain ChromaDB vector store
         
         Args:
             file_id: UUID của file
@@ -284,70 +309,62 @@ class KnowledgeBaseService:
             tuple: (success, chunks_count, error_message)
         """
         try:
-            # Kiểm tra ChromaDB đã được khởi tạo chưa
-            if not self.collection:
-                return False, 0, "ChromaDB not initialized"
+            if not self.vector_store:
+                return False, 0, "Vector store not initialized"
             
-            # Chia text thành các chunks nhỏ
+            # Chia text thành chunks sử dụng Langchain
             text_chunks = self._split_text_into_chunks(extracted_text)
             
             if not text_chunks:
                 return False, 0, "No text chunks to save"
             
-            # Chuẩn bị dữ liệu cho ChromaDB
-            chunk_ids = []
-            chunk_documents = []
-            chunk_metadatas = []
-            
+            # Tạo Langchain Documents
+            documents = []
             for i, chunk in enumerate(text_chunks):
-                # Tạo unique ID cho mỗi chunk (file_id + chunk_index)
-                chunk_id = f"{file_id}_chunk_{i}"
-                
-                # Phát hiện ngôn ngữ chính của chunk
+                # Phát hiện ngôn ngữ và chuẩn hóa
                 language = self._detect_language(chunk)
-                
-                # Chuẩn hóa nội dung chunk để tìm kiếm tốt hơn
                 normalized_chunk = self._normalize_vietnamese_text(chunk)
                 
-                # Metadata cho mỗi chunk
-                # filename_uuid = file_id gốc để có thể nhóm tất cả chunks của cùng 1 file
-                chunk_metadata = {
+                # Metadata cho mỗi document
+                doc_metadata = {
                     "file_id": file_id,
                     "chunk_index": i,
                     "title": title,
                     "description": description,
                     "filename": metadata.get("original_filename", ""),
-                    "filename_uuid": file_id,  # Dùng file_id gốc làm filename_uuid để nhóm chunks theo file
+                    "filename_uuid": file_id,
                     "upload_time": metadata.get("upload_time", ""),
                     "file_size": metadata.get("file_size", 0),
                     "pages_count": metadata.get("pages_count", 0),
                     "chunk_length": len(chunk),
                     "language": language,
-                    "normalized_content": normalized_chunk  # Thêm content đã chuẩn hóa
+                    "normalized_content": normalized_chunk
                 }
                 
-                chunk_ids.append(chunk_id)
-                chunk_documents.append(chunk)
-                chunk_metadatas.append(chunk_metadata)
+                # Tạo Langchain Document
+                doc = Document(
+                    page_content=chunk,
+                    metadata=doc_metadata
+                )
+                documents.append(doc)
             
-            # Lưu vào ChromaDB với auto-generated embeddings
-            self.collection.add(
-                documents=chunk_documents,
-                metadatas=chunk_metadatas,
-                ids=chunk_ids
-            )
+            # Tạo unique IDs cho các documents
+            doc_ids = [f"{file_id}_chunk_{i}" for i in range(len(documents))]
             
-            print(f"✅ Saved {len(text_chunks)} chunks to ChromaDB for file: {title}")
-            return True, len(text_chunks), None
+            # Lưu vào Langchain ChromaDB vector store
+            self.vector_store.add_documents(documents, ids=doc_ids)
+            
+            print(f"✅ Saved {len(documents)} documents to Langchain ChromaDB for file: {title}")
+            return True, len(documents), None
             
         except Exception as e:
-            error_msg = f"Error saving to vector DB: {str(e)}"
+            error_msg = f"Error saving to Langchain vector store: {str(e)}"
             print(f"❌ {error_msg}")
             return False, 0, error_msg
     
-    def search_in_vector_db(self, query, n_results=5, file_id=None):
+    def search_in_vector_db(self, query: str, n_results: int = 5, file_id: Optional[str] = None) -> tuple:
         """
-        Tìm kiếm trong vector database
+        Tìm kiếm trong Langchain vector store
         
         Args:
             query: Câu hỏi/từ khóa tìm kiếm
@@ -358,42 +375,76 @@ class KnowledgeBaseService:
             tuple: (success, results, error_message)
         """
         try:
-            if not self.collection:
-                return False, [], "ChromaDB not initialized"
+            if not self.vector_store:
+                return False, [], "Vector store not initialized"
             
-            # Chuẩn bị filter nếu cần tìm trong file cụ thể
-            where_filter = None
+            # Tạo filter nếu cần tìm trong file cụ thể
+            search_kwargs = {"k": n_results}
             if file_id:
-                where_filter = {"file_id": file_id}
+                search_kwargs["filter"] = {"file_id": file_id}
             
-            # Thực hiện tìm kiếm vector similarity
-            results = self.collection.query(
-                query_texts=[query],
-                n_results=n_results,
-                where=where_filter,
-                include=["documents", "metadatas", "distances"]
-            )
+            # Thực hiện similarity search với Langchain
+            docs = self.vector_store.similarity_search(query, **search_kwargs)
             
-            # Format kết quả trả về
+            # Format kết quả
             formatted_results = []
-            if results["documents"] and results["documents"][0]:
-                for i, doc in enumerate(results["documents"][0]):
-                    result_item = {
-                        "content": doc,
-                        "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
-                        "similarity_score": 1 - results["distances"][0][i] if results["distances"] else 0
-                    }
-                    formatted_results.append(result_item)
+            for doc in docs:
+                result_item = {
+                    "content": doc.page_content,
+                    "metadata": doc.metadata,
+                    "similarity_score": 0.8  # Langchain similarity_search không trả về score mặc định
+                }
+                formatted_results.append(result_item)
             
             return True, formatted_results, None
             
         except Exception as e:
-            error_msg = f"Error searching vector DB: {str(e)}"
+            error_msg = f"Error searching Langchain vector store: {str(e)}"
+            return False, [], error_msg
+    
+    def search_with_scores(self, query: str, n_results: int = 5, file_id: Optional[str] = None) -> tuple:
+        """
+        Tìm kiếm với similarity scores
+        
+        Args:
+            query: Câu hỏi/từ khóa tìm kiếm
+            n_results: Số kết quả trả về
+            file_id: Tìm kiếm trong file cụ thể (optional)
+            
+        Returns:
+            tuple: (success, results, error_message)
+        """
+        try:
+            if not self.vector_store:
+                return False, [], "Vector store not initialized"
+            
+            # Tạo filter nếu cần
+            search_kwargs = {"k": n_results}
+            if file_id:
+                search_kwargs["filter"] = {"file_id": file_id}
+            
+            # Sử dụng similarity_search_with_score
+            docs_with_scores = self.vector_store.similarity_search_with_score(query, **search_kwargs)
+            
+            # Format kết quả với scores
+            formatted_results = []
+            for doc, score in docs_with_scores:
+                result_item = {
+                    "content": doc.page_content,
+                    "metadata": doc.metadata,
+                    "similarity_score": 1 - score  # Chuyển đổi distance thành similarity
+                }
+                formatted_results.append(result_item)
+            
+            return True, formatted_results, None
+            
+        except Exception as e:
+            error_msg = f"Error searching with scores: {str(e)}"
             return False, [], error_msg
     
     def delete_from_vector_db(self, file_id):
         """
-        Xóa tất cả chunks của một file khỏi vector database
+        Xóa documents khỏi Langchain vector store
         
         Args:
             file_id: UUID của file cần xóa
@@ -402,24 +453,65 @@ class KnowledgeBaseService:
             tuple: (success, error_message)
         """
         try:
-            if not self.collection:
-                return False, "ChromaDB not initialized"
+            if not self.vector_store:
+                return False, "Vector store not initialized"
             
-            # Tìm tất cả chunks của file này
-            results = self.collection.get(
-                where={"file_id": file_id},
-                include=["documents"]
-            )
+            # Tìm tất cả documents của file này
+            docs = self.vector_store.get(where={"file_id": file_id})
             
-            if results["ids"]:
-                # Xóa tất cả chunks
-                self.collection.delete(ids=results["ids"])
-                print(f"✅ Deleted {len(results['ids'])} chunks from ChromaDB for file: {file_id}")
+            if docs and docs.get("ids"):
+                # Xóa documents theo IDs
+                self.vector_store.delete(ids=docs["ids"])
+                print(f"✅ Deleted {len(docs['ids'])} documents from Langchain ChromaDB for file: {file_id}")
             
             return True, None
             
         except Exception as e:
-            error_msg = f"Error deleting from vector DB: {str(e)}"
+            error_msg = f"Error deleting from Langchain vector store: {str(e)}"
+            return False, error_msg
+    
+    def get_vector_store_as_retriever(self, search_kwargs: Optional[Dict] = None):
+        """
+        Lấy vector store dưới dạng Langchain Retriever
+        
+        Args:
+            search_kwargs: Tham số cho retriever
+            
+        Returns:
+            Langchain Retriever hoặc None
+        """
+        try:
+            if not self.vector_store:
+                return None
+            
+            if search_kwargs is None:
+                search_kwargs = {"k": 3}
+            
+            return self.vector_store.as_retriever(search_kwargs=search_kwargs)
+            
+        except Exception as e:
+            print(f"❌ Error creating retriever: {str(e)}")
+            return None
+    
+    def add_documents_to_vector_store(self, documents: List[Document]):
+        """
+        Thêm Langchain Documents vào vector store
+        
+        Args:
+            documents: List of Langchain Document objects
+            
+        Returns:
+            tuple: (success, error_message)
+        """
+        try:
+            if not self.vector_store:
+                return False, "Vector store not initialized"
+            
+            self.vector_store.add_documents(documents)
+            return True, None
+            
+        except Exception as e:
+            error_msg = f"Error adding documents to vector store: {str(e)}"
             return False, error_msg
     
     def process_uploaded_file(self, file, title, description):
@@ -997,263 +1089,15 @@ class KnowledgeBaseService:
         except Exception as e:
             return False, [], f"Error searching with filters: {str(e)}"
 
-    def search_in_multiple_files(self, query, filename_uuids, max_results=5):
-        """
-        Tìm kiếm trong nhiều files cụ thể dựa trên list filename_uuid
-        Hỗ trợ tìm kiếm tiếng Việt với xử lý văn bản cải tiến
-        
-        Args:
-            query: Câu hỏi tìm kiếm (tiếng Việt hoặc tiếng Anh)
-            filename_uuids: List các filename_uuid để tìm kiếm
-            max_results: Số kết quả tối đa trả về
-            
-        Returns:
-            tuple: (success, results, error_message)
-        """
-        try:
-            if not self.collection:
-                return False, [], "ChromaDB not initialized"
-            
-            if not filename_uuids or len(filename_uuids) == 0:
-                return False, [], "No filename_uuids provided"
-            
-            # Tạo filter để tìm kiếm trong các files cụ thể
-            filters = {
-                "filename_uuid": {"$in": filename_uuids}
-            }
-            
-            print(f"🔍 Searching for query: '{query}' in files: {filename_uuids}")
-            
-            # Chiến lược 1: Tìm kiếm trực tiếp với query gốc
-            success, search_results, error_message = self.search_chunks_with_filters(
-                query, filters, max_results
-            )
-            
-            if success and len(search_results) > 0:
-                print(f"✅ Found {len(search_results)} results with original query")
-                return self._format_search_results(search_results, query, filename_uuids, max_results)
-            
-            # Chiến lược 2: Chuẩn hóa query và thử lại
-            normalized_query = self._normalize_vietnamese_text(query)
-            if normalized_query != query:
-                print(f"🔄 Trying normalized query: '{normalized_query}'")
-                success, search_results, error_message = self.search_chunks_with_filters(
-                    normalized_query, filters, max_results
-                )
-                
-                if success and len(search_results) > 0:
-                    print(f"✅ Found {len(search_results)} results with normalized query")
-                    return self._format_search_results(search_results, query, filename_uuids, max_results)
-            
-            # Chiến lược 3: Tìm kiếm với từ khóa
-            keywords = self._extract_keywords_vietnamese(query)
-            if keywords:
-                keyword_query = " ".join(keywords)
-                print(f"🔑 Trying keyword search: '{keyword_query}'")
-                success, search_results, error_message = self.search_chunks_with_filters(
-                    keyword_query, filters, max_results
-                )
-                
-                if success and len(search_results) > 0:
-                    print(f"✅ Found {len(search_results)} results with keyword search")
-                    return self._format_search_results(search_results, query, filename_uuids, max_results)
-            
-            # Chiến lược 4: Tìm kiếm text matching trực tiếp
-            print("🔍 Trying direct text matching...")
-            text_match_results = self._search_text_matching(query, filename_uuids, max_results)
-            if text_match_results:
-                print(f"✅ Found {len(text_match_results)} results with text matching")
-                return True, text_match_results, f"Found {len(text_match_results)} results using text matching"
-            
-            # Nếu không tìm thấy gì
-            if not success:
-                return False, [], error_message
-            
-            return True, [], "No matching results found"
-            
-        except Exception as e:
-            return False, [], f"Error searching in multiple files: {str(e)}"
-    
-    def _search_text_matching(self, query, filename_uuids, max_results=5):
-        """
-        Tìm kiếm bằng text matching trực tiếp (không dùng vector similarity)
-        Hữu ích cho các từ khóa cụ thể hoặc khi vector search không hiệu quả
-        """
-        try:
-            # Lấy tất cả chunks của các files được chỉ định
-            all_chunks = self.collection.get(
-                where={"filename_uuid": {"$in": filename_uuids}},
-                include=["documents", "metadatas"]
-            )
-            
-            if not all_chunks["documents"]:
-                return []
-            
-            # Chuẩn hóa query để so sánh
-            normalized_query = self._normalize_vietnamese_text(query).lower()
-            query_keywords = set(normalized_query.split())
-            
-            # Tìm kiếm text matching
-            matching_results = []
-            for i, doc in enumerate(all_chunks["documents"]):
-                if not doc:
-                    continue
-                
-                normalized_doc = self._normalize_vietnamese_text(doc).lower()
-                doc_words = set(normalized_doc.split())
-                
-                # Tính điểm dựa trên số từ khóa khớp
-                matching_words = query_keywords.intersection(doc_words)
-                if matching_words:
-                    score = len(matching_words) / len(query_keywords)
-                    
-                    # Kiểm tra xem có chứa phrase không
-                    if normalized_query in normalized_doc:
-                        score += 0.5  # Bonus cho exact phrase match
-                    
-                    metadata = all_chunks["metadatas"][i] if i < len(all_chunks["metadatas"]) else {}
-                    
-                    result = {
-                        "content": doc,
-                        "similarity_score": min(score, 1.0),  # Cap at 1.0
-                        "metadata": metadata,
-                        "matching_words": list(matching_words)
-                    }
-                    matching_results.append(result)
-            
-            # Sắp xếp theo điểm số và trả về top results
-            matching_results.sort(key=lambda x: x["similarity_score"], reverse=True)
-            
-            # Format results giống như vector search
-            formatted_results = []
-            for result in matching_results[:max_results]:
-                metadata = result.get("metadata", {})
-                formatted_result = {
-                    "content": result.get("content", ""),
-                    "similarity_score": result.get("similarity_score", 0),
-                    "source": {
-                        "file_id": metadata.get("filename_uuid", ""),
-                        "filename_uuid": metadata.get("filename_uuid", ""),
-                        "title": metadata.get("title", ""),
-                        "filename": metadata.get("filename", ""),
-                        "chunk_index": metadata.get("chunk_index", 0),
-                        "chunk_length": len(result.get("content", "")),
-                        "search_method": "text_matching",
-                        "matching_words": result.get("matching_words", [])
-                    }
-                }
-                formatted_results.append(formatted_result)
-            
-            return formatted_results
-            
-        except Exception as e:
-            print(f"Error in text matching search: {str(e)}")
-            return []
-    
-    def _format_search_results(self, search_results, original_query, filename_uuids, max_results):
-        """
-        Format search results cho API response
-        """
-        formatted_results = []
-        for result in search_results:
-            metadata = result.get("metadata", {})
-            formatted_result = {
-                "content": result.get("content", ""),
-                "similarity_score": result.get("similarity_score", 0),
-                "source": {
-                    "file_id": metadata.get("filename_uuid", ""),
-                    "filename_uuid": metadata.get("filename_uuid", ""),
-                    "title": metadata.get("title", ""),
-                    "filename": metadata.get("filename", ""),
-                    "chunk_index": metadata.get("chunk_index", 0),
-                    "chunk_length": len(result.get("content", "")),
-                    "search_method": "vector_similarity"
-                }
-            }
-            formatted_results.append(formatted_result)
-        
-        return True, formatted_results, f"Found {len(formatted_results)} results in {len(filename_uuids)} files"
-    
-    def _normalize_vietnamese_text(self, text):
-        """
-        Chuẩn hóa text tiếng Việt để tìm kiếm tốt hơn
-        
-        Args:
-            text: Text cần chuẩn hóa
-            
-        Returns:
-            str: Text đã được chuẩn hóa
-        """
-        if not text:
-            return text
-        
-        # Chuyển về lowercase
-        normalized = text.lower()
-        
-        # Loại bỏ dấu câu thừa
-        normalized = re.sub(r'[^\w\sàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]', ' ', normalized)
-        
-        # Loại bỏ multiple spaces
-        normalized = re.sub(r'\s+', ' ', normalized).strip()
-        
-        return normalized
-    
-    def _extract_keywords_vietnamese(self, text):
-        """
-        Trích xuất từ khóa quan trọng từ query tiếng Việt
-        
-        Args:
-            text: Text cần trích xuất từ khóa
-            
-        Returns:
-            list: Danh sách từ khóa quan trọng
-        """
-        if not text:
-            return []
-        
-        # Chuẩn hóa text
-        normalized = self._normalize_vietnamese_text(text)
-        
-        # Danh sách stop words tiếng Việt phổ biến
-        vietnamese_stop_words = {
-            'là', 'của', 'và', 'có', 'trong', 'với', 'để', 'được', 'một', 'các', 'này', 'đó', 
-            'như', 'về', 'cho', 'từ', 'khi', 'nào', 'nếu', 'thì', 'sẽ', 'đã', 'đang', 'sao',
-            'gì', 'ai', 'đâu', 'bao', 'giờ', 'nào', 'thế', 'tại', 'vì', 'do', 'bởi', 'theo',
-            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
-            'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after', 'above',
-            'below', 'between', 'among', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-            'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should'
-        }
-        
-        # Tách từ và loại bỏ stop words
-        words = normalized.split()
-        keywords = []
-        
-        for word in words:
-            # Giữ lại từ có độ dài >= 3 và không phải stop word
-            if len(word) >= 3 and word not in vietnamese_stop_words:
-                keywords.append(word)
-        
-        # Giới hạn số từ khóa trả về
-        return keywords[:5]
-    
     def _detect_language(self, text):
         """
         Phát hiện ngôn ngữ chính của text (tiếng Việt hoặc tiếng Anh)
-        
-        Args:
-            text: Text cần phân tích
-            
-        Returns:
-            str: 'vi' cho tiếng Việt, 'en' cho tiếng Anh, 'mixed' cho hỗn hợp
+        Giữ lại method này vì vẫn cần thiết cho metadata
         """
         if not text or len(text.strip()) < 10:
             return 'unknown'
         
-        # Các ký tự đặc trưng tiếng Việt
         vietnamese_chars = 'àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ'
-        
-        # Đếm ký tự tiếng Việt
         vietnamese_count = 0
         total_chars = 0
         
@@ -1268,7 +1112,6 @@ class KnowledgeBaseService:
         
         vietnamese_ratio = vietnamese_count / total_chars
         
-        # Nếu > 5% ký tự là tiếng Việt thì coi là tiếng Việt
         if vietnamese_ratio > 0.05:
             return 'vi'
         elif vietnamese_ratio > 0.01:
@@ -1276,59 +1119,33 @@ class KnowledgeBaseService:
         else:
             return 'en'
     
-    def debug_chunks_content(self, filename_uuids=None, limit=3):
+    def _normalize_vietnamese_text(self, text):
         """
-        Debug method để xem nội dung thực tế của chunks
-        Giúp hiểu tại sao tìm kiếm không trả về kết quả mong muốn
+        Chuẩn hóa text tiếng Việt để tìm kiếm tốt hơn
+        Giữ lại method này vì vẫn cần thiết cho text processing
+        """
+        if not text:
+            return text
         
-        Args:
-            filename_uuids: List filename_uuid để debug (optional)
-            limit: Số chunks tối đa để hiển thị
-            
-        Returns:
-            tuple: (success, debug_info, error_message)
+        normalized = text.lower()
+        normalized = re.sub(r'[^\w\sàáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]', ' ', normalized)
+        normalized = re.sub(r'\s+', ' ', normalized).strip()
+        
+        return normalized
+    
+    # ========================================
+    # LEGACY METHODS - Deprecated với Langchain
+    # ========================================
+    
+    def search_in_multiple_files(self, query, filename_uuids, max_results=5):
         """
-        try:
-            if not self.collection:
-                return False, {}, "ChromaDB not initialized"
-            
-            # Tạo filter nếu có filename_uuids
-            where_filter = None
-            if filename_uuids:
-                where_filter = {"filename_uuid": {"$in": filename_uuids}}
-            
-            # Lấy chunks để debug
-            results = self.collection.get(
-                where=where_filter,
-                limit=limit,
-                include=["documents", "metadatas"]
-            )
-            
-            debug_info = {
-                "total_chunks": len(results["documents"]) if results["documents"] else 0,
-                "chunks_preview": []
-            }
-            
-            if results["documents"]:
-                for i, doc in enumerate(results["documents"][:limit]):
-                    metadata = results["metadatas"][i] if i < len(results["metadatas"]) else {}
-                    
-                    chunk_info = {
-                        "chunk_index": i,
-                        "content_preview": doc[:200] + "..." if len(doc) > 200 else doc,
-                        "content_length": len(doc),
-                        "language": metadata.get("language", "unknown"),
-                        "title": metadata.get("title", ""),
-                        "filename": metadata.get("filename", ""),
-                        "filename_uuid": metadata.get("filename_uuid", ""),
-                        "chunk_metadata_index": metadata.get("chunk_index", 0)
-                    }
-                    debug_info["chunks_preview"].append(chunk_info)
-            
-            return True, debug_info, None
-            
-        except Exception as e:
-            return False, {}, f"Error debugging chunks: {str(e)}"
+        DEPRECATED: Sử dụng Langchain vector store search thay thế
+        Tìm kiếm trong nhiều files cụ thể dựa trên list filename_uuid
+        """
+        print("⚠️ search_in_multiple_files is deprecated, using Langchain search instead")
+        
+        # Delegate to Langchain search with file filter
+        return self.search_with_scores(query, max_results, file_id=filename_uuids[0] if filename_uuids else None)
     
     def reset_chromadb(self, confirm_reset=False):
         """

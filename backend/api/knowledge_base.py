@@ -23,12 +23,20 @@ knowledge_base_bp = Blueprint('knowledge_base', __name__)
 # Global service instance
 _knowledge_base_service = None
 
-def init_knowledge_base_api():
+def init_knowledge_base_api(knowledge_base_service=None):
     """
-    Khởi tạo knowledge base API
+    Khởi tạo knowledge base API với dependency injection
+    
+    Args:
+        knowledge_base_service: Instance của KnowledgeBaseService với Langchain
     """
     global _knowledge_base_service
-    _knowledge_base_service = KnowledgeBaseService()
+    
+    if knowledge_base_service:
+        _knowledge_base_service = knowledge_base_service
+    else:
+        # Fallback nếu không có service được inject
+        _knowledge_base_service = KnowledgeBaseService()
 
 @knowledge_base_bp.route('/knowledge-base/upload', methods=['POST'])
 @swag_from({
@@ -675,6 +683,11 @@ def clear_all_chunks():
                         'description': 'User question or message',
                         'example': 'Explain the coding standards in Java'
                     },
+                    'session_id': {
+                        'type': 'string',
+                        'description': 'Session ID to maintain conversation memory (optional)',
+                        'example': 'user_session_123'
+                    },
                     'max_results': {
                         'type': 'integer',
                         'description': 'Maximum number of relevant documents to retrieve',
@@ -728,7 +741,20 @@ def clear_all_chunks():
                         'properties': {
                             'query': {'type': 'string'},
                             'results_found': {'type': 'integer'},
-                            'search_time': {'type': 'string'}
+                            'search_time': {'type': 'string'},
+                            'session_id': {'type': 'string'},
+                            'cache_hit': {'type': 'boolean'},
+                            'related_searches': {
+                                'type': 'array',
+                                'items': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'question': {'type': 'string'},
+                                        'similarity': {'type': 'number'},
+                                        'timestamp': {'type': 'string'}
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -777,6 +803,7 @@ def chat_with_knowledge_base():
                 "error": "Message cannot be empty"
             }), 400
         
+        session_id = data.get('session_id', None)
         max_results = data.get('max_results', 3)
         file_ids = data.get('file_ids', None)
         
@@ -832,9 +859,19 @@ Bạn có thể upload file PDF chứa thông tin bạn cần thông qua trang K
         # Bước 4: Tạo context cho AI từ các tài liệu tìm được
         context_parts = []
         for i, result in enumerate(search_results[:max_results], 1):
-            source_info = f"[Nguồn {i}: {result['source']['title']}]"
-            content = result['content']
-            context_parts.append(f"{source_info}\n{content}")
+            try:
+                # Safe access to result data
+                source = result.get('source', {})
+                title = source.get('title', 'Unknown source')
+                content = result.get('content', '')
+                
+                source_info = f"[Nguồn {i}: {title}]"
+                context_parts.append(f"{source_info}\n{content}")
+            except Exception as e:
+                print(f"Error processing search result {i}: {str(e)}")
+                print(f"Result structure: {result}")
+                # Continue with next result instead of failing completely
+                continue
         
         context = "\n\n".join(context_parts)
         
@@ -863,14 +900,19 @@ Sử dụng tiếng Việt.
 
 Câu trả lời:"""
 
-        # Bước 6: Sử dụng AI service để tạo câu trả lời
+        # Bước 6: Sử dụng AI service để tạo câu trả lời với Langchain memory
         from services.ai_service import AIService
-        ai_service = AIService()
+        from services.langchain_service import LangchainService
         
-        ai_result = ai_service.chat_with_ai(
-            message=ai_prompt,
-            history=[],
-            is_quick_action=False
+        # Khởi tạo services với session support
+        langchain_service = LangchainService()
+        ai_service = AIService(langchain_service=langchain_service)
+        
+        # Sử dụng Langchain RAG với session memory
+        ai_result = langchain_service.chat_with_rag(
+            question=ai_prompt,
+            chat_history=[],
+            session_id=session_id
         )
         
         if not ai_result["success"]:
@@ -879,17 +921,22 @@ Câu trả lời:"""
                 "error": f"AI processing failed: {ai_result.get('error', 'Unknown error')}"
             }), 500
         
-        # Bước 7: Trả về kết quả
-        return jsonify({
+        # Bước 7: Trả về kết quả với memory info
+        response_data = {
             "success": True,
-            "response": ai_result["response"],
+            "response": ai_result["answer"],
             "sources": search_results,
             "search_info": {
                 "query": message,
                 "results_found": len(search_results),
-                "search_time": f"{search_time}s"
+                "search_time": f"{search_time}s",
+                "session_id": ai_result.get("session_id"),
+                "cache_hit": ai_result.get("search_context", {}).get("cache_hit", False),
+                "related_searches": ai_result.get("search_context", {}).get("related_searches", [])
             }
-        }), 200
+        }
+        
+        return jsonify(response_data), 200
         
     except Exception as e:
         error_trace = traceback.format_exc()
@@ -898,4 +945,197 @@ Câu trả lời:"""
         return jsonify({
             "success": False,
             "error": f"Chat processing failed: {str(e)}"
+        }), 500
+
+@knowledge_base_bp.route('/knowledge-base/memory/sessions', methods=['GET'])
+@swag_from({
+    'tags': ['knowledge-base'],
+    'summary': 'Get memory sessions',
+    'description': 'Get information about all active memory sessions',
+    'responses': {
+        200: {
+            'description': 'Memory sessions retrieved successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'data': {
+                        'type': 'object',
+                        'properties': {
+                            'total_sessions': {'type': 'integer'},
+                            'total_search_entries': {'type': 'integer'},
+                            'sessions': {
+                                'type': 'object',
+                                'additionalProperties': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'conversation_messages': {'type': 'integer'},
+                                        'search_history_entries': {'type': 'integer'}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+})
+def get_memory_sessions():
+    """
+    Lấy thông tin về các memory sessions
+    """
+    try:
+        from services.langchain_service import LangchainService
+        
+        langchain_service = LangchainService()
+        memory_stats = langchain_service.get_memory_stats()
+        
+        return jsonify({
+            "success": True,
+            "data": memory_stats
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to get memory sessions: {str(e)}"
+        }), 500
+
+@knowledge_base_bp.route('/knowledge-base/memory/history/<session_id>', methods=['GET'])
+@swag_from({
+    'tags': ['knowledge-base'],
+    'summary': 'Get session search history',
+    'description': 'Get search history for a specific session',
+    'parameters': [
+        {
+            'name': 'session_id',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'Session ID to get history for'
+        },
+        {
+            'name': 'limit',
+            'in': 'query',
+            'type': 'integer',
+            'description': 'Maximum number of history entries to return',
+            'default': 10
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Search history retrieved successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'data': {
+                        'type': 'object',
+                        'properties': {
+                            'session_id': {'type': 'string'},
+                            'search_history': {
+                                'type': 'array',
+                                'items': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'question': {'type': 'string'},
+                                        'answer': {'type': 'string'},
+                                        'timestamp': {'type': 'string'},
+                                        'source_docs_count': {'type': 'integer'}
+                                    }
+                                }
+                            },
+                            'total_entries': {'type': 'integer'}
+                        }
+                    }
+                }
+            }
+        }
+    }
+})
+def get_session_search_history(session_id):
+    """
+    Lấy search history của session cụ thể
+    """
+    try:
+        limit = request.args.get('limit', 10, type=int)
+        
+        from services.langchain_service import LangchainService
+        
+        langchain_service = LangchainService()
+        search_history = langchain_service.get_session_search_history(session_id, limit)
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "session_id": session_id,
+                "search_history": search_history,
+                "total_entries": len(search_history)
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to get search history: {str(e)}"
+        }), 500
+
+@knowledge_base_bp.route('/knowledge-base/memory/clear/<session_id>', methods=['POST'])
+@swag_from({
+    'tags': ['knowledge-base'],
+    'summary': 'Clear session memory',
+    'description': 'Clear conversation memory and search history for a specific session',
+    'parameters': [
+        {
+            'name': 'session_id',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'Session ID to clear memory for'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Session memory cleared successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'message': {'type': 'string'},
+                    'data': {
+                        'type': 'object',
+                        'properties': {
+                            'session_id': {'type': 'string'},
+                            'cleared': {'type': 'boolean'}
+                        }
+                    }
+                }
+            }
+        }
+    }
+})
+def clear_session_memory(session_id):
+    """
+    Xóa memory và search history của session
+    """
+    try:
+        from services.langchain_service import LangchainService
+        
+        langchain_service = LangchainService()
+        langchain_service.clear_session_memory(session_id)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Session memory cleared for {session_id}",
+            "data": {
+                "session_id": session_id,
+                "cleared": True
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Failed to clear session memory: {str(e)}"
         }), 500

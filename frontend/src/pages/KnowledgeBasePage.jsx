@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
-import axios from 'axios';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import MessageContent from '../components/MessageContent';
+import MemoryPanel from '../components/MemoryPanel';
+import { useSession } from '../components/SessionManager';
+import apiService from '../services/apiService';
 import './KnowledgeBasePage.css';
 
 // Import highlight.js styles
 import 'highlight.js/styles/github.css';
-
-const API_BASE_URL = 'http://localhost:8888/api';
 
 // Helper function to convert base64 string to Blob
 function base64ToBlob(base64, mime) {
@@ -33,10 +33,14 @@ function KnowledgeBasePage({ onNavigate }) {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [availableFiles, setAvailableFiles] = useState([]); // Danh sách files có sẵn
-  const [selectedFiles, setSelectedFiles] = useState([]); // Files được chọn để chat
+  const [availableFiles, setAvailableFiles] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [memoryPanelVisible, setMemoryPanelVisible] = useState(false);
 
-    // State + ref để điều khiển audio TTS
+  // Use session context
+  const { sessionId, searchHistory, addToSearchHistory } = useSession();
+
+  // State + ref để điều khiển audio TTS
   const [audioPlayingIndex, setAudioPlayingIndex] = useState(null);
   const audioRef = useRef(null);
   
@@ -59,13 +63,11 @@ function KnowledgeBasePage({ onNavigate }) {
     try {
       console.log('Starting TTS for text:', text.substring(0, 50) + '...');
       
-      const response = await axios.post('http://localhost:8888/api/tts', {
-        text: text
-      });
+      const response = await apiService.textToSpeech(text);
 
-      console.log('TTS API response:', response.data);
+      console.log('TTS API response:', response);
 
-      if (response.data.success) {
+      if (response.success) {
         const audioBase64 = response.data.audio_base64;
         const mimeType = response.data.mimeType || 'audio/wav';
         console.log('Audio base64 length:', audioBase64.length);
@@ -112,7 +114,7 @@ function KnowledgeBasePage({ onNavigate }) {
           }
         }
       } else {
-        console.error('TTS API failed:', response.data.error);
+        console.error('TTS API failed:', response.error);
       }
     } catch (error) {
       console.error('Error calling TTS API:', error);
@@ -125,9 +127,9 @@ function KnowledgeBasePage({ onNavigate }) {
 
   const loadAvailableFiles = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/knowledge-base/files`);
-      if (response.data.success && response.data.data && response.data.data.files) {
-        setAvailableFiles(response.data.data.files);
+      const response = await apiService.getKnowledgeBaseFiles();
+      if (response.success && response.data && response.data.files) {
+        setAvailableFiles(response.data.files);
       } else {
         setAvailableFiles([]);
       }
@@ -162,19 +164,14 @@ function KnowledgeBasePage({ onNavigate }) {
 
     setUploading(true);
     try {
-      // Upload file to backend
-      const formData = new FormData();
-      formData.append('file', uploadedFile);
-      formData.append('title', uploadedFile.name);
-      formData.append('description', `Uploaded on ${new Date().toLocaleString()}`);
+      // Upload file using apiService
+      const response = await apiService.uploadKnowledgeBaseFile(
+        uploadedFile,
+        uploadedFile.name,
+        `Uploaded on ${new Date().toLocaleString()}`
+      );
 
-      const response = await axios.post(`${API_BASE_URL}/knowledge-base/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.data.success) {
+      if (response.success) {
         const newMessage = {
           id: Date.now(),
           type: 'bot',
@@ -187,11 +184,11 @@ function KnowledgeBasePage({ onNavigate }) {
         document.getElementById('file-upload').value = '';
         loadAvailableFiles();
       } else {
-        alert('Upload error: ' + response.data.error);
+        alert('Upload error: ' + (response.error || 'Unknown error'));
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('File upload error: ' + (error.response?.data?.error || error.message));
+      alert('File upload error: ' + error.message);
     } finally {
       setUploading(false);
     }
@@ -222,32 +219,36 @@ function KnowledgeBasePage({ onNavigate }) {
     setIsLoading(true);
     
     try {
-      // Prepare chat request
-      const chatData = {
-        message: currentInput,
-        max_results: 50
-      };
+      // Use apiService with session support
+      const response = await apiService.knowledgeBaseChat(
+        currentInput,
+        selectedFiles,
+        5, // max_results
+        sessionId
+      );
 
-      // Add selected files if any
-      if (selectedFiles.length > 0) {
-        chatData.file_ids = selectedFiles;
-      }
+      if (response.success) {
+        // Add to search history
+        addToSearchHistory({
+          query: currentInput,
+          timestamp: new Date(),
+          type: 'knowledge_base',
+          session_id: sessionId,
+          file_count: selectedFiles.length
+        });
 
-      const response = await axios.post(`${API_BASE_URL}/knowledge-base/chat`, chatData);
-
-      if (response.data.success) {
         const botMessage = {
           id: Date.now() + 1,
           type: 'bot',
-          content: response.data.response,
-          sources: response.data.sources || []
+          content: response.response, // Fix: response.response thay vì response.data.response
+          sources: response.sources || [] // Fix: response.sources thay vì response.data.sources
         };
         setMessages(prev => [...prev, botMessage]);
       } else {
         const errorMessage = {
           id: Date.now() + 1,
           type: 'bot',
-          content: `Error: ${response.data.error}`
+          content: `Error: ${response.error}`
         };
         setMessages(prev => [...prev, errorMessage]);
       }
@@ -256,7 +257,7 @@ function KnowledgeBasePage({ onNavigate }) {
       const errorMessage = {
         id: Date.now() + 1,
         type: 'bot',
-        content: `Connection error: ${error.response?.data?.error || error.message}`
+        content: `Connection error: ${error.message}`
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -369,13 +370,24 @@ function KnowledgeBasePage({ onNavigate }) {
           <div className="right-panel">
             <div className="chat-section">
               <div className="chat-header">
-                <h3>💬 AI Assistant</h3>
-                <div className="chat-info">
-                  {selectedFiles.length > 0 ? (
-                    <span>Chatting with {selectedFiles.length} selected document(s)</span>
-                  ) : (
-                    <span>Chatting with all documents</span>
-                  )}
+                <div className="chat-title">
+                  <h3>💬 AI Assistant</h3>
+                  <div className="chat-info">
+                    {selectedFiles.length > 0 ? (
+                      <span>Chatting with {selectedFiles.length} selected document(s)</span>
+                    ) : (
+                      <span>Chatting with all documents</span>
+                    )}
+                  </div>
+                </div>
+                <div className="chat-controls">
+                  <button 
+                    onClick={() => setMemoryPanelVisible(!memoryPanelVisible)}
+                    className={`memory-btn ${memoryPanelVisible ? 'active' : ''}`}
+                    title="Memory & Sessions"
+                  >
+                    🧠 Memory ({searchHistory.length})
+                  </button>
                 </div>
               </div>
               
@@ -401,11 +413,17 @@ function KnowledgeBasePage({ onNavigate }) {
                             <details>
                               <summary>📖 Nguồn tham khảo ({message.sources.length})</summary>
                               <div className="sources-list">
-                                {message.sources.map((source, index) => (
+                                {message.sources.map((item, index) => (
                                   <div key={index} className="source-item">
-                                    <div className="source-title">{source.source.title}</div>
-                                    <div className="source-content">{source.content.substring(0, 200)}...</div>
-                                    <div className="source-score">Độ liên quan: {(source.similarity_score * 100).toFixed(1)}%</div>
+                                    <div className="source-title">
+                                      {item?.source?.title || item?.metadata?.title || 'Unknown source'}
+                                    </div>
+                                    <div className="source-content">
+                                      {(item?.content || '').substring(0, 200)}...
+                                    </div>
+                                    <div className="source-score">
+                                      Độ liên quan: {((item?.similarity_score || 0) * 100).toFixed(1)}%
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -454,6 +472,12 @@ function KnowledgeBasePage({ onNavigate }) {
       </main>
       
       <Footer />
+      
+      {/* Memory Panel */}
+      <MemoryPanel 
+        isVisible={memoryPanelVisible}
+        onToggle={() => setMemoryPanelVisible(!memoryPanelVisible)}
+      />
       
       {/* Thẻ audio ẩn dùng để phát TTS */}
       <audio

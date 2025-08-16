@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ChatAssistant from './components/ChatAssistant';
 import CodeEditor from './components/CodeEditor';
 import HomePage from './pages/HomePage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
+import { SessionProvider } from './components/SessionManager';
+import apiService from './services/apiService';
 import './App.css';
-
-const API_BASE_URL = 'http://localhost:8888/api';
 
 function App() {
   const [code, setCode] = useState('');
@@ -30,12 +29,12 @@ function App() {
   }); // Add page state
 
   useEffect(() => {
-    // Fetch supported languages - Lấy danh sách ngôn ngữ được hỗ trợ
+    // Fetch supported languages
     const fetchLanguages = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/languages`);
-        if (response.data.success) {
-          setSupportedLanguages(response.data.languages);
+        const response = await apiService.getSupportedLanguages();
+        if (response.success) {
+          setSupportedLanguages(response.languages); // Fix: response.languages thay vì response.data.languages
         }
       } catch (err) {
         console.error('Error fetching languages:', err);
@@ -142,7 +141,7 @@ function App() {
     setError('');
   };
 
-  // Quick Action handlers - Xử lý các Quick Action
+  // Quick Action handlers
   const handleQuickAction = async (actionType, prompt) => {
     if (!code.trim()) {
       setError('Please enter code before using Quick Action');
@@ -155,18 +154,14 @@ function App() {
     const message = `${prompt}\n\n\`\`\`${language}\n${code}\n\`\`\``;
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/chat`, {
-        message: message,
-        history: [],
-        is_quick_action: true
-      });
+      const response = await apiService.chatWithSession(message, null, true);
 
-      if (response.data.success) {
-        setCommentedCode(response.data.response);
-        setTokensInfo(response.data.tokens_info);
+      if (response.success) {
+        setCommentedCode(response.response); // Fix: response.response thay vì response.data.response
+        setTokensInfo(response.tokens_info); // Fix: response.tokens_info thay vì response.data.tokens_info
         setError('');
       } else {
-        setError(response.data.error || 'An error occurred while processing Quick Action');
+        setError(response.error || 'An error occurred while processing Quick Action');
       }
     } catch (err) {
       console.error('Quick Action error:', err);
@@ -244,31 +239,33 @@ function App() {
   };
 
   return (
-    <div className="App">
-      {renderContent()}
+    <SessionProvider>
+      <div className="App">
+        {renderContent()}
 
-      {/* Floating Chat Button - Only show on home page */}
-      {currentPage === 'home' && (
-        <button
-          onClick={toggleChat}
-          className={`floating-chat-btn ${chatVisible ? 'active' : ''}`}
-          title={chatVisible ? "Close AI Assistant" : "Open AI Assistant"}
-        >
-          {chatVisible ? '✕' : '🤖'}
-        </button>
-      )}
+        {/* Floating Chat Button - Only show on home page */}
+        {currentPage === 'home' && (
+          <button
+            onClick={toggleChat}
+            className={`floating-chat-btn ${chatVisible ? 'active' : ''}`}
+            title={chatVisible ? "Close AI Assistant" : "Open AI Assistant"}
+          >
+            {chatVisible ? '✕' : '🤖'}
+          </button>
+        )}
 
-      {/* Chat Assistant Sidebar - Only show on home page */}
-      {currentPage === 'home' && (
-        <ChatAssistant 
-          isVisible={chatVisible} 
-          onToggle={toggleChat}
-          currentCode={code}
-          currentLanguage={language}
-          onChatResult={handleChatResult}
-        />
-      )}
-    </div>
+        {/* Chat Assistant Sidebar - Only show on home page */}
+        {currentPage === 'home' && (
+          <ChatAssistant 
+            isVisible={chatVisible} 
+            onToggle={toggleChat}
+            currentCode={code}
+            currentLanguage={language}
+            onChatResult={handleChatResult}
+          />
+        )}
+      </div>
+    </SessionProvider>
   );
 }
 

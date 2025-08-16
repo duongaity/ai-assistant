@@ -56,6 +56,11 @@ def init_chat_api(ai_service):
                         'type': 'boolean',
                         'description': 'True if this is a quick action (comment, debug, optimize, test)',
                         'example': False
+                    },
+                    'session_id': {
+                        'type': 'string',
+                        'description': 'Session ID to maintain conversation memory across requests',
+                        'example': 'user_session_123'
                     }
                 },
                 'required': ['message']
@@ -126,6 +131,7 @@ def chat():
         message = data['message']
         history = data.get('history', [])                    # Lịch sử trò chuyện để duy trì ngữ cảnh
         is_quick_action = data.get('is_quick_action', False) # Cờ để phân biệt hành động nhanh vs trò chuyện thông thường
+        session_id = data.get('session_id', None)           # Session ID để maintain memory across requests
         
         if not message.strip():
             return jsonify({
@@ -133,11 +139,12 @@ def chat():
                 "error": "Message cannot be empty"
             }), 400
         
-        # Bước 2: Gọi AI service để xử lý
+        # Bước 2: Gọi AI service với session support
         result = _ai_service.chat_with_ai(
             message=message,
             history=history,
-            is_quick_action=is_quick_action
+            is_quick_action=is_quick_action,
+            session_id=session_id
         )
         
         # Bước 3: Trả về phản hồi
