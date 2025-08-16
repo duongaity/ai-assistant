@@ -61,6 +61,16 @@ def init_chat_api(ai_service):
                         'type': 'string',
                         'description': 'Session ID to maintain conversation memory across requests',
                         'example': 'user_session_123'
+                    },
+                    'display_language': {
+                        'type': 'string',
+                        'description': 'Display language for responses (en or vi)',
+                        'example': 'en'
+                    },
+                    'programming_language': {
+                        'type': 'string',
+                        'description': 'Programming language of the code being discussed',
+                        'example': 'javascript'
                     }
                 },
                 'required': ['message']
@@ -129,10 +139,11 @@ def chat():
         
         # Trích xuất các tham số từ yêu cầu
         message = data['message']
-        history = data.get('history', [])                    # Lịch sử trò chuyện để duy trì ngữ cảnh
-        is_quick_action = data.get('is_quick_action', False) # Cờ để phân biệt hành động nhanh vs trò chuyện thông thường
-        session_id = data.get('session_id', None)           # Session ID để maintain memory across requests
-        language = data.get('language', 'en')               # Ngôn ngữ hệ thống (en/vi), mặc định tiếng Anh
+        history = data.get('history', [])                         # Lịch sử trò chuyện để duy trì ngữ cảnh
+        is_quick_action = data.get('is_quick_action', False)      # Cờ để phân biệt hành động nhanh vs trò chuyện thông thường
+        session_id = data.get('session_id', None)                # Session ID để maintain memory across requests
+        display_language = data.get('display_language', 'en')    # Ngôn ngữ hiển thị (en/vi), mặc định tiếng Anh
+        programming_language = data.get('programming_language', 'javascript')  # Ngôn ngữ lập trình, mặc định JavaScript
         
         if not message.strip():
             return jsonify({
@@ -146,7 +157,8 @@ def chat():
             history=history,
             is_quick_action=is_quick_action,
             session_id=session_id,
-            language=language
+            display_language=display_language,
+            programming_language=programming_language
         )
         
         # Bước 3: Trả về phản hồi

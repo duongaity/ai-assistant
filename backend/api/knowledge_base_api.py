@@ -806,10 +806,10 @@ def chat_with_knowledge_base():
         session_id = data.get('session_id', None)
         max_results = data.get('max_results', 3)
         file_ids = data.get('file_ids', None)
-        language = data.get('language', 'en')  # Thêm ngôn ngữ hệ thống
+        display_language = data.get('display_language', 'en')  # Ngôn ngữ hiển thị (en/vi)
         
         # Debug log để kiểm tra tham số nhận được
-        print(f"Knowledge Base API - Language: {language}, Message: {message[:50]}...")
+        print(f"Knowledge Base API - Display Language: {display_language}, Message: {message[:50]}...")
         
         # Bước 2: Tìm kiếm trong knowledge base
         import time
@@ -881,7 +881,7 @@ Bạn có thể upload file PDF chứa thông tin bạn cần thông qua trang K
         
         # Bước 5: Tạo prompt cho AI
         # Bước 5: Tạo prompt cho AI với thông tin từ knowledge base
-        if language == 'vi':
+        if display_language == 'vi':
             ai_prompt = f"""Bạn là một AI Assistant thông minh và thân thiện. Hãy trả lời câu hỏi của người dùng CHÍNH XÁC dựa trên thông tin từ các tài liệu được cung cấp.
 
 Câu hỏi: {message}

@@ -9,6 +9,7 @@ import CodeEditor from '../components/CodeEditor';
 function HomePage({
   onNavigate,
   language,
+  displayLanguage,
   supportedLanguages,
   onLanguageChange,
   onFileUpload,
@@ -32,7 +33,7 @@ function HomePage({
         <div className="controls">
           <div className="controls-left">
             <div className="language-selector">
-              <label htmlFor="language">Programming Language:</label>
+              <label htmlFor="language">{displayLanguage === 'vi' ? 'Ngôn ngữ lập trình:' : 'Programming Language:'}</label>
               <select
                 id="language"
                 value={language}
@@ -58,13 +59,13 @@ function HomePage({
                 onClick={() => fileInputRef && fileInputRef.current && fileInputRef.current.click()}
                 className="btn btn-secondary"
               >
-                📁 Upload File
+                📁 {displayLanguage === 'vi' ? 'Tải tập tin' : 'Upload File'}
               </button>
               <button
                 onClick={onClearAll}
                 className="btn btn-secondary"
               >
-                🗑️ Clear All
+                🗑️ {displayLanguage === 'vi' ? 'Xóa tất cả' : 'Clear All'}
               </button>
             </div>
           </div>
@@ -76,37 +77,37 @@ function HomePage({
                   onClick={onCommentCode}
                   className="btn btn-quick-action"
                   disabled={loading || !code.trim()}
-                  title="Add detailed comments to code"
+                  title={displayLanguage === 'vi' ? 'Thêm comment chi tiết vào code' : 'Add detailed comments to code'}
                 >
                   <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>💬</span>
-                  Comment Code
+                  {displayLanguage === 'vi' ? 'Thêm Ghi Chú' : 'Comment Code'}
                 </button>
                 <button
                   onClick={onFindBugs}
                   className="btn btn-quick-action"
                   disabled={loading || !code.trim()}
-                  title="Find and fix bugs in code"
+                  title={displayLanguage === 'vi' ? 'Tìm và sửa lỗi trong code' : 'Find and fix bugs in code'}
                 >
                   <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>🐛</span>
-                  Find Bugs
+                  {displayLanguage === 'vi' ? 'Tìm Lỗi Code' : 'Find Bugs'}
                 </button>
                 <button
                   onClick={onOptimize}
                   className="btn btn-quick-action"
                   disabled={loading || !code.trim()}
-                  title="Optimize code performance"
+                  title={displayLanguage === 'vi' ? 'Tối ưu hiệu suất code' : 'Optimize code performance'}
                 >
                   <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>⚡</span>
-                  Optimize Code
+                  {displayLanguage === 'vi' ? 'Tối Ưu Code' : 'Optimize Code'}
                 </button>
                 <button
                   onClick={onGenerateTests}
                   className="btn btn-quick-action"
                   disabled={loading || !code.trim()}
-                  title="Generate unit tests for code"
+                  title={displayLanguage === 'vi' ? 'Tạo unit test cho code' : 'Generate unit tests for code'}
                 >
                   <span style={{ fontSize: '1rem', marginRight: '0.2rem' }}>🧪</span>
-                  Generate Tests
+                  {displayLanguage === 'vi' ? 'Tạo Unit Test' : 'Generate Tests'}
                 </button>
               </div>
             </div>
@@ -121,22 +122,22 @@ function HomePage({
 
         <div className="code-sections">
           <div className="code-section">
-            <h3>📥 Input</h3>
+            <h3>📥 {displayLanguage === 'vi' ? 'Nhập Code' : 'Input'}</h3>
             <CodeEditor
               value={code}
               onChange={setCode}
               language={language}
-              placeholder={`Enter or paste ${language} code here...`}
+              placeholder={displayLanguage === 'vi' ? `Nhập hoặc dán code ${language} vào đây...` : `Enter or paste ${language} code here...`}
               rows={15}
             />
           </div>
 
           <div className="code-section">
-            <h3>📤 Output</h3>
+            <h3>📤 {displayLanguage === 'vi' ? 'Kết quả' : 'Output'}</h3>
             {loading ? (
               <div className="loading-container">
                 <div className="loading-spinner"></div>
-                <p>Processing code with AI...</p>
+                <p>{displayLanguage === 'vi' ? 'Đang xử lý code với AI...' : 'Processing code with AI...'}</p>
               </div>
             ) : commentedCode ? (
               <div className="code-output">
@@ -151,7 +152,7 @@ function HomePage({
               </div>
             ) : (
               <div className="placeholder">
-                AI Assistant output will be displayed here...
+                {displayLanguage === 'vi' ? 'Kết quả từ AI Assistant sẽ được hiển thị ở đây...' : 'AI Assistant output will be displayed here...'}
               </div>
             )}
           </div>

@@ -27,8 +27,8 @@ function AppContent() {
     return 'home';
   }); // Add page state
 
-  // Use language context
-  const { language: systemLanguage } = useLanguage();
+  // Use language context for display language
+  const { language: displayLanguage } = useLanguage();
 
   useEffect(() => {
     // Fetch supported languages
@@ -151,9 +151,16 @@ function AppContent() {
 
     try {
       // Debug log để kiểm tra ngôn ngữ
-      console.log('Quick Action - System language:', systemLanguage);
+      console.log('Quick Action - Display language:', displayLanguage);
+      console.log('Quick Action - Programming language:', language);
 
-      const response = await apiService.chatWithAI(message, [], true, systemLanguage);
+      const response = await apiService.chatWithAI(
+        message, 
+        [], 
+        true, 
+        displayLanguage, // Display language (en/vi)
+        language // Programming language (java/python/javascript...)
+      );
 
       if (response.success) {
         setCommentedCode(response.response); // Fix: response.response thay vì response.data.response
@@ -171,28 +178,28 @@ function AppContent() {
   };
 
   const handleCommentCode = () => {
-    const prompt = systemLanguage === 'vi'
+    const prompt = displayLanguage === 'vi'
       ? 'Thêm comment chi tiết bằng tiếng Việt vào code này, giải thích từng phần làm gì:'
       : 'Add detailed comments in English to this code, explain what each part does:';
     handleQuickAction('comment', prompt);
   };
 
   const handleFindBugs = () => {
-    const prompt = systemLanguage === 'vi'
+    const prompt = displayLanguage === 'vi'
       ? 'Tìm và sửa lỗi trong code này:'
       : 'Find and fix bugs in this code:';
     handleQuickAction('debug', prompt);
   };
 
   const handleOptimize = () => {
-    const prompt = systemLanguage === 'vi'
+    const prompt = displayLanguage === 'vi'
       ? 'Tối ưu hiệu suất của code này:'
       : 'Optimize the performance of this code:';
     handleQuickAction('optimize', prompt);
   };
 
   const handleGenerateTests = () => {
-    const prompt = systemLanguage === 'vi'
+    const prompt = displayLanguage === 'vi'
       ? 'Tạo unit test cho code này:'
       : 'Generate unit tests for this code:';
     handleQuickAction('test', prompt);
@@ -241,6 +248,7 @@ function AppContent() {
       <HomePage
         onNavigate={handleNavigate}
         language={language}
+        displayLanguage={displayLanguage}
         supportedLanguages={supportedLanguages}
         onLanguageChange={handleLanguageChange}
         onFileUpload={handleFileUpload}

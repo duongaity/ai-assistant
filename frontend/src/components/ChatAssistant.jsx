@@ -19,8 +19,8 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
   // Use session context
   const { sessionId, addToSearchHistory } = useSession();
   
-  // Use language context
-  const { language } = useLanguage();
+  // Use language context for display language
+  const { language: displayLanguage } = useLanguage();
 
   // Auto scroll to bottom - Tự động cuộn xuống cuối
   useEffect(() => {
@@ -71,7 +71,7 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
     } else {
       const loadingMessage = { 
         type: 'bot', 
-        content: language === 'vi' ? '🔄 Đang xử lý code của bạn...' : '🔄 Processing your code...', 
+        content: displayLanguage === 'vi' ? '🔄 Đang xử lý code của bạn...' : '🔄 Processing your code...', 
         timestamp: new Date(),
         isQuickActionLoading: true 
       };
@@ -84,14 +84,16 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
 
     try {
       // Debug log để kiểm tra ngôn ngữ
-      console.log('Current language:', language);
+      console.log('Display language:', displayLanguage);
+      console.log('Programming language:', currentLanguage);
       
       // Use apiService with session support (no need to send message history)
       const response = await apiService.chatWithAI(
         finalMessage,
         [], // Empty history since session is managed on backend
         isQuickAction,
-        language // Thêm ngôn ngữ hệ thống
+        displayLanguage, // Ngôn ngữ hiển thị (en/vi)
+        currentLanguage || 'javascript' // Ngôn ngữ lập trình
       );
 
       if (response.success) {
@@ -119,14 +121,14 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
         if (isQuickAction) {
           setMessages(prev => prev.filter(msg => !msg.isQuickActionLoading));
         }
-        setError(response.error || (language === 'vi' ? 'Đã xảy ra lỗi' : 'An error occurred'));
+        setError(response.error || (displayLanguage === 'vi' ? 'Đã xảy ra lỗi' : 'An error occurred'));
       }
     } catch (err) {
       console.error('Chat error:', err);
       if (isQuickAction) {
         setMessages(prev => prev.filter(msg => !msg.isQuickActionLoading));
       }
-      setError(language === 'vi' ? 'Không thể kết nối với Trợ Lý AI' : 'Unable to connect to AI Assistant');
+      setError(displayLanguage === 'vi' ? 'Không thể kết nối với Trợ Lý AI' : 'Unable to connect to AI Assistant');
     } finally {
       setLoading(false);
     }
@@ -240,20 +242,20 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
       <div className="chat-header">
         <div className="chat-title">
           <span className="chat-icon">🤖</span>
-          <h3>{language === 'vi' ? 'Trợ Lý Lập Trình AI' : 'AI Programming Assistant'}</h3>
+          <h3>{displayLanguage === 'vi' ? 'Trợ Lý Lập Trình AI' : 'AI Programming Assistant'}</h3>
         </div>
         <div className="chat-controls">
           <button 
             onClick={clearChat} 
             className="control-btn clear-btn"
-            title={language === 'vi' ? 'Xóa cuộc trò chuyện' : 'Clear chat'}
+            title={displayLanguage === 'vi' ? 'Xóa cuộc trò chuyện' : 'Clear chat'}
           >
             🧽
           </button>
           <button 
             onClick={onToggle} 
             className="control-btn close-btn"
-            title={language === 'vi' ? 'Đóng chat' : 'Close chat'}
+            title={displayLanguage === 'vi' ? 'Đóng chat' : 'Close chat'}
           >
             X
           </button>
@@ -264,10 +266,10 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
         {messages.length === 0 ? (
           <div className="welcome-message">
             <div className="welcome-icon">🚀</div>
-            <h4>{language === 'vi' ? 'Chào mừng đến với Trợ Lý AI!' : 'Welcome to AI Assistant!'}</h4>
-            <p>{language === 'vi' ? 'Tôi có thể giúp bạn với:' : 'I can help you with:'}</p>
+            <h4>{displayLanguage === 'vi' ? 'Chào mừng đến với Trợ Lý AI!' : 'Welcome to AI Assistant!'}</h4>
+            <p>{displayLanguage === 'vi' ? 'Tôi có thể giúp bạn với:' : 'I can help you with:'}</p>
             <ul>
-              {language === 'vi' ? (
+              {displayLanguage === 'vi' ? (
                 <>
                   <li>Giải thích code và thuật toán</li>
                   <li>Câu hỏi và trả lời về lập trình</li>
@@ -287,7 +289,7 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
                 </>
               )}
             </ul>
-            <p>{language === 'vi' ? '💡 Bắt đầu bằng cách gửi tin nhắn hoặc đặt câu hỏi về lập trình!' : '💡 Get started by sending a message or asking programming questions!'}</p>
+            <p>{displayLanguage === 'vi' ? '💡 Bắt đầu bằng cách gửi tin nhắn hoặc đặt câu hỏi về lập trình!' : '💡 Get started by sending a message or asking programming questions!'}</p>
           </div>
         ) : (
           messages.map(renderMessage)
@@ -322,7 +324,7 @@ const ChatAssistant = ({ isVisible, onToggle, currentCode, currentLanguage, onCh
             value={inputMessage}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
-            placeholder={language === 'vi' ? 'Bạn muốn hỏi gì?' : 'What would you like to ask?'}
+            placeholder={displayLanguage === 'vi' ? 'Bạn muốn hỏi gì?' : 'What would you like to ask?'}
             className="message-input"
             rows="1"
             disabled={loading}

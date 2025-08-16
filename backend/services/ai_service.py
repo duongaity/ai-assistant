@@ -170,7 +170,7 @@ class AIService:
             }
         ]
     
-    def chat_with_ai(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, session_id: str = None, language: str = 'en') -> Dict[str, Any]:
+    def chat_with_ai(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, session_id: str = None, display_language: str = 'en', programming_language: str = 'javascript') -> Dict[str, Any]:
         """
         Chat với AI sử dụng Langchain hoặc fallback to legacy với session support
         
@@ -179,19 +179,20 @@ class AIService:
             history: Lịch sử chat để maintain context
             is_quick_action: True nếu là quick action
             session_id: Session ID để maintain memory
-            language: Ngôn ngữ hệ thống ('en' hoặc 'vi')
+            display_language: Ngôn ngữ hiển thị ('en' hoặc 'vi')
+            programming_language: Ngôn ngữ lập trình (javascript, python, java, ...)
             
         Returns:
             dict: Response từ AI hoặc error message
         """
         # Nếu có Langchain service, ưu tiên sử dụng
         if self.langchain_service:
-            return self._chat_with_langchain(message, history, is_quick_action, session_id, language)
+            return self._chat_with_langchain(message, history, is_quick_action, session_id, display_language, programming_language)
         
         # Fallback to legacy implementation
-        return self._chat_with_legacy(message, history, is_quick_action, language)
+        return self._chat_with_legacy(message, history, is_quick_action, display_language)
     
-    def _chat_with_langchain(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, session_id: str = None, language: str = 'en') -> Dict[str, Any]:
+    def _chat_with_langchain(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, session_id: str = None, display_language: str = 'en', programming_language: str = 'javascript') -> Dict[str, Any]:
         """
         Chat sử dụng Langchain service với session support
         """
@@ -201,8 +202,8 @@ class AIService:
                 result = self.langchain_service.process_code_with_langchain(
                     task=self._extract_task_from_message(message),
                     code=self._extract_code_from_message(message),
-                    language=self._detect_language_from_message(message),
-                    system_language=language  # Thêm ngôn ngữ hệ thống
+                    language=programming_language,  # Sử dụng programming language
+                    system_language=display_language  # Ngôn ngữ hiển thị
                 )
                 
                 if result["success"]:
@@ -214,7 +215,7 @@ class AIService:
                     }
                 else:
                     # Fallback to legacy if Langchain fails
-                    return self._chat_with_legacy(message, history, is_quick_action, language)
+                    return self._chat_with_legacy(message, history, is_quick_action, display_language)
             
             else:
                 # Normal chat với RAG capabilities và session memory
@@ -222,7 +223,7 @@ class AIService:
                     question=message, 
                     chat_history=history,
                     session_id=session_id,
-                    system_language=language  # Thêm ngôn ngữ hệ thống
+                    system_language=display_language  # Ngôn ngữ hiển thị
                 )
                 
                 if result["success"]:
@@ -236,11 +237,11 @@ class AIService:
                     }
                 else:
                     # Fallback to legacy
-                    return self._chat_with_legacy(message, history, is_quick_action)
+                    return self._chat_with_legacy(message, history, is_quick_action, display_language)
                     
         except Exception as e:
             print(f"⚠️ Langchain chat failed: {str(e)}, falling back to legacy")
-            return self._chat_with_legacy(message, history, is_quick_action)
+            return self._chat_with_legacy(message, history, is_quick_action, display_language)
     
     def _extract_task_from_message(self, message: str) -> str:
         """Extract task type from message"""
@@ -277,7 +278,7 @@ class AIService:
             return 'javascript'
         else:
             return 'unknown'
-    def _chat_with_legacy(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, language: str = 'en') -> Dict[str, Any]:
+    def _chat_with_legacy(self, message: str, history: Optional[List] = None, is_quick_action: bool = False, display_language: str = 'en') -> Dict[str, Any]:
         """
         Legacy chat implementation (deprecated, dùng cho fallback)
         """
@@ -294,7 +295,7 @@ class AIService:
             # Chọn system message phù hợp với từng mode và ngôn ngữ
             if is_quick_action:
                 # System message cho quick actions - chỉ trả về code thuần túy
-                if language == 'vi':
+                if display_language == 'vi':
                     system_content = """Bạn là một AI Assistant chuyên về lập trình. Khi nhận được yêu cầu từ Quick Action:
 
 QUAN TRỌNG: CHỈ TRẢ VỀ CODE ĐÃ XỬ LÝ, KHÔNG GIẢI THÍCH THÊM!
@@ -341,7 +342,7 @@ Example Output: [commented code, nothing else]"""
                 })
             else:
                 # System message cho chat thường - trả lời đầy đủ với giải thích
-                if language == 'vi':
+                if display_language == 'vi':
                     system_content = """Bạn là một AI Assistant thông minh và hữu ích, chuyên về lập trình và công nghệ. 
                     
 Nhiệm vụ của bạn:

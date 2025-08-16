@@ -8,7 +8,7 @@
  * - Cache management
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8888/api';
+const API_BASE_URL = 'http://localhost:8888/api';
 
 class ApiService {
   constructor() {
@@ -45,14 +45,15 @@ class ApiService {
   /**
    * Chat với AI Assistant với session memory
    */
-  async chatWithAI(message, history = [], isQuickAction = false, language = 'en') {
+  async chatWithAI(message, history = [], isQuickAction = false, displayLanguage = 'en', programmingLanguage = 'javascript') {
     try {
       const requestBody = {
         message,
         history, // Vẫn gửi history cho backward compatibility
         is_quick_action: isQuickAction,
         session_id: this.sessionId, // Thêm session ID
-        language: language // Thêm ngôn ngữ hệ thống
+        display_language: displayLanguage, // Ngôn ngữ hiển thị (en/vi)
+        programming_language: programmingLanguage // Ngôn ngữ lập trình (java/php/python...)
       };
 
       // Debug log để kiểm tra payload
@@ -82,13 +83,13 @@ class ApiService {
   /**
    * Chat với Knowledge Base với memory support
    */
-  async chatWithKnowledgeBase(message, fileIds = null, maxResults = 3, language = 'en') {
+  async chatWithKnowledgeBase(message, fileIds = null, maxResults = 3, displayLanguage = 'en') {
     try {
       const requestBody = {
         message,
         session_id: this.sessionId,
         max_results: maxResults,
-        language: language // Thêm ngôn ngữ hệ thống
+        display_language: displayLanguage // Ngôn ngữ hiển thị (en/vi)
       };
 
       if (fileIds && fileIds.length > 0) {
@@ -322,7 +323,7 @@ class ApiService {
     return this.getUploadedFiles();
   }
 
-  async knowledgeBaseChat(message, fileIds = null, maxResults = 3, sessionId = null, language = 'en') {
+  async knowledgeBaseChat(message, fileIds = null, maxResults = 3, sessionId = null, displayLanguage = 'en') {
     // Use provided sessionId or fall back to current session
     const oldSessionId = this.sessionId;
     if (sessionId) {
@@ -330,7 +331,7 @@ class ApiService {
     }
 
     try {
-      const result = await this.chatWithKnowledgeBase(message, fileIds, maxResults, language);
+      const result = await this.chatWithKnowledgeBase(message, fileIds, maxResults, displayLanguage);
       return result;
     } finally {
       // Restore original sessionId

@@ -190,18 +190,30 @@ class LangchainService:
         
         # Code processing chain
         code_prompt = PromptTemplate(
-            input_variables=["task", "code", "language"],
+            input_variables=["task", "code", "programming_language", "system_language"],
             template="""
-Bạn là một AI Assistant chuyên về lập trình. Thực hiện task sau:
+You are an AI Assistant specialized in programming. Based on the system language, respond appropriately.
 
+System Language: {system_language}
 Task: {task}
-Language: {language}
+Programming Language: {programming_language}
 Code:
-```{language}
+```{programming_language}
 {code}
 ```
 
-Hãy thực hiện task được yêu cầu và trả về kết quả theo format được chỉ định.
+If system_language is 'vi':
+- Respond in Vietnamese
+- Use Vietnamese technical terms and explanations
+- Be friendly and detailed in Vietnamese
+
+If system_language is 'en':
+- Respond in English
+- Use English technical terms and explanations
+- Be professional and clear in English
+
+Please complete the requested task and return the result in the appropriate format.
+For code tasks, always wrap code in markdown code blocks with the correct language identifier.
 """
         )
         
@@ -436,14 +448,14 @@ Response style:
                 "error": f"Error in RAG chat: {str(e)}"
             }
     
-    def process_code_with_langchain(self, task: str, code: str, language: str, system_language: str = 'en') -> Dict[str, Any]:
+    def process_code_with_langchain(self, task: str, code: str, programming_language: str, system_language: str = 'en') -> Dict[str, Any]:
         """
         Xử lý code sử dụng Langchain
         
         Args:
             task: Loại task (comment, fix_bugs, optimize, etc.)
             code: Source code
-            language: Programming language
+            programming_language: Programming language (javascript, python, java, ...)
             system_language: Ngôn ngữ hệ thống ('en' hoặc 'vi')
             
         Returns:
@@ -451,7 +463,7 @@ Response style:
         """
         try:
             # Debug log để kiểm tra tham số
-            print(f"Langchain Service - process_code_with_langchain: task={task}, language={language}, system_language={system_language}")
+            print(f"Langchain Service - process_code_with_langchain: task={task}, programming_language={programming_language}, system_language={system_language}")
             
             if not self.code_chain:
                 return {
@@ -462,7 +474,8 @@ Response style:
             result = self.code_chain.run(
                 task=task,
                 code=code,
-                language=language
+                programming_language=programming_language,
+                system_language=system_language
             )
             
             return {
