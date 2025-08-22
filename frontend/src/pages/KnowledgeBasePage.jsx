@@ -36,8 +36,8 @@ const locales = {
     connectionError: "Connection error",
   },
   vi: {
-    uploadDocuments: "📁 Tải lên tài liệu",
-    chooseFile: "Chọn tệp",
+    uploadDocuments: "📁 Tải Lên Tài Liệu",
+    chooseFile: "Chọn tệp tin",
     uploading: "Đang tải lên...",
     noFile: "Chưa chọn tệp",
     supported: "Hỗ trợ: PDF, TXT, MD, DOCX (tối đa 10MB)",
@@ -503,9 +503,9 @@ function KnowledgeBasePage({ onNavigate }) {
                                     <div className="source-content">
                                       {(item?.content || '').substring(0, 200)}...
                                     </div>
-                                    <div className="source-score">
+                                    {/* <div className="source-score">
                                       {t.relevance}: {((item?.similarity_score || 0) * 100).toFixed(1)}%
-                                    </div>
+                                    </div> */}
                                   </div>
                                 ))}
                               </div>
