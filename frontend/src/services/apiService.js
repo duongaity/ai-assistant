@@ -9,7 +9,6 @@
  */
 
 const API_BASE_URL = 'http://localhost:8888/api';
-
 class ApiService {
   constructor() {
     this.sessionId = this.getOrCreateSessionId();
