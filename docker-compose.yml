@@ -10,7 +10,7 @@ services:
     ports:
       - "8888:8888"
     env_file:
-      - application.env
+      - ./backend/application.env
     environment:
       - FLASK_ENV=production
     volumes:

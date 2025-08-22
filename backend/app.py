@@ -70,6 +70,8 @@ def create_app():
     app.register_blueprint(knowledge_base_bp, url_prefix='/api')
     app.register_blueprint(tts_bp, url_prefix='/api')
     
+    app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB
+    
     # Root endpoint để redirect đến Swagger UI
     @app.route('/')
     def root():

@@ -1,33 +1,31 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './HowToUse.css';
 
-function HowToUse({ type = 'homepage' }) {
-  const getStepsConfig = () => {
-    if (type === 'knowledge-base') {
-      return {
-        title: '✨ How to Use Knowledge Base',
-        steps: [
-          {
-            icon: '📝',
-            title: 'Upload File',
-            description: 'Upload files (PDF, .md, Word, TXT)'
-          },
-          {
-            icon: '🔧',
-            title: 'Select File',
-            description: 'Choose the file you want to ask questions about'
-          },
-          {
-            icon: '🤖',
-            title: 'Ask Assistant',
-            description: 'Ask questions to the AI assistant'
-          }
-        ]
-      };
-    }
-    
-    // Default homepage configuration
-    return {
+import { useLanguage } from '../contexts/LanguageContext';
+
+const translations = {
+  en: {
+    'knowledge-base': {
+      title: '✨ How to Use Knowledge Base',
+      steps: [
+        {
+          icon: '📝',
+          title: 'Upload File',
+          description: 'Upload files (PDF, .md, Word, TXT)'
+        },
+        {
+          icon: '🔧',
+          title: 'Select File',
+          description: 'Choose the file you want to ask questions about'
+        },
+        {
+          icon: '🤖',
+          title: 'Ask Assistant',
+          description: 'Ask questions to the AI assistant'
+        }
+      ]
+    },
+    homepage: {
       title: '✨ How to Use AI Assistant',
       steps: [
         {
@@ -46,10 +44,64 @@ function HowToUse({ type = 'homepage' }) {
           description: 'Chat with AI for help & guidance'
         }
       ]
-    };
-  };
+    }
+  },
+  vi: {
+    'knowledge-base': {
+      title: '✨ Hướng dẫn sử dụng',
+      steps: [
+        {
+          icon: '📝',
+          title: 'Tải tệp lên',
+          description: 'Tải lên các tệp (PDF, .md, Word, TXT)'
+        },
+        {
+          icon: '🔧',
+          title: 'Chọn tệp',
+          description: 'Chọn tệp bạn muốn hỏi đáp'
+        },
+        {
+          icon: '🤖',
+          title: 'Hỏi trợ lý',
+          description: 'Đặt câu hỏi cho trợ lý AI'
+        }
+      ]
+    },
+    homepage: {
+      title: '✨ Hướng dẫn sử dụng',
+      steps: [
+        {
+          icon: '📝',
+          title: 'Tải mã lên',
+          description: 'Dán hoặc tải lên các tệp mã nguồn'
+        },
+        {
+          icon: '🔧',
+          title: 'Chọn hỗ trợ',
+          description: 'Bình luận, Gỡ lỗi, Tối ưu và Tạo kiểm thử'
+        },
+        {
+          icon: '🤖',
+          title: 'Trợ lý AI',
+          description: 'Trò chuyện với AI để được hỗ trợ & hướng dẫn'
+        }
+      ]
+    }
+  }
+};
 
-  const config = getStepsConfig();
+function HowToUse({ type = 'homepage' }) {
+  // Use language context
+  const { language } = useLanguage();
+
+  const config =
+    translations[language] && translations[language][type]
+      ? translations[language][type]
+      : translations['en']['homepage'];
+
+  // useEffect(() => {
+  //   setMessages(initialMessages[language]);
+  // }, [language]);
 
   return (
     <section className="how-to-use">

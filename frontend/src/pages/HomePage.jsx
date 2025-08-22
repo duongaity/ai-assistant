@@ -59,13 +59,13 @@ function HomePage({
                 onClick={() => fileInputRef && fileInputRef.current && fileInputRef.current.click()}
                 className="btn btn-secondary"
               >
-                📁 {displayLanguage === 'vi' ? 'Tải tập tin' : 'Upload File'}
+                📁 {displayLanguage === 'vi' ? 'Tải Tập Tin' : 'Upload File'}
               </button>
               <button
                 onClick={onClearAll}
                 className="btn btn-secondary"
               >
-                🗑️ {displayLanguage === 'vi' ? 'Xóa tất cả' : 'Clear All'}
+                🗑️ {displayLanguage === 'vi' ? 'Xóa Tất Cả' : 'Clear All'}
               </button>
             </div>
           </div>
@@ -122,7 +122,7 @@ function HomePage({
 
         <div className="code-sections">
           <div className="code-section">
-            <h3>📥 {displayLanguage === 'vi' ? 'Nhập Code' : 'Input'}</h3>
+            <h3>📥 {displayLanguage === 'vi' ? 'Dữ Liệu' : 'Input'}</h3>
             <CodeEditor
               value={code}
               onChange={setCode}
@@ -133,7 +133,7 @@ function HomePage({
           </div>
 
           <div className="code-section">
-            <h3>📤 {displayLanguage === 'vi' ? 'Kết quả' : 'Output'}</h3>
+            <h3>📤 {displayLanguage === 'vi' ? 'Kết Quả' : 'Output'}</h3>
             {loading ? (
               <div className="loading-container">
                 <div className="loading-spinner"></div>

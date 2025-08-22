@@ -66,7 +66,7 @@ AI Programming Assistant is a full-stack application designed to help developers
 
 ```
 ai-assistant/
-├── application.env              # Environment configuration
+├── .env                         # Environment configuration
 ├── docker-compose.yml           # Container orchestration
 ├── Workshop_AI_Programming_Assistant.pptx  # Project presentation
 ├── backend/                     # Python Flask API
@@ -131,6 +131,7 @@ ai-assistant/
 ## 🚀 Getting Started
 
 ### Quick Start with Docker
+
 ```bash
 # 1. Clone repository
 git clone <repository-url>
@@ -147,6 +148,7 @@ docker-compose up --build
 ```
 
 ### Development Mode
+
 ```bash
 # Backend only
 cd backend
