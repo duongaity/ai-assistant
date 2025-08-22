@@ -1,20 +1,49 @@
-/**
- * Memory Panel Component
- * 
- * Hiển thị thông tin session memory và search history
- */
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useSession } from './SessionManager';
+import { useLanguage } from '../contexts/LanguageContext'; // Thêm dòng này
 import './MemoryPanel.css';
 
+const translations = {
+  en: {
+    memorySessions: '🧠 Memory & Sessions',
+    currentSession: 'Current Session',
+    resetSession: '🗑️ Reset Session',
+    refresh: '🔄 Refresh',
+    searchHistory: count => `Search History (${count})`,
+    noHistory: 'No search history yet',
+    clearHistory: '🧹 Clear History',
+    confirmReset: '⚠️ Confirm Reset',
+    confirmText: 'This will clear all conversation memory and search history for this session. Are you sure?',
+    yesReset: 'Yes, Reset',
+    cancel: 'Cancel',
+    files: count => `📄 ${count} files`
+  },
+  vi: {
+    memorySessions: '🧠 Bộ nhớ & Phiên',
+    currentSession: 'Phiên hiện tại',
+    resetSession: '🗑️ Đặt lại phiên',
+    refresh: '🔄 Làm mới',
+    searchHistory: count => `Lịch sử tìm kiếm (${count})`,
+    noHistory: 'Chưa có lịch sử tìm kiếm',
+    clearHistory: '🧹 Xóa lịch sử',
+    confirmReset: '⚠️ Xác nhận đặt lại',
+    confirmText: 'Thao tác này sẽ xóa toàn bộ bộ nhớ hội thoại và lịch sử tìm kiếm của phiên này. Bạn có chắc không?',
+    yesReset: 'Đồng ý đặt lại',
+    cancel: 'Hủy',
+    files: count => `📄 ${count} tệp`
+  }
+};
+
 const MemoryPanel = ({ isVisible, onToggle }) => {
-  const { 
-    sessionId, 
-    searchHistory, 
-    memoryStats, 
-    isLoading, 
-    resetSession, 
+  const { language } = useLanguage(); // Thêm dòng này
+  const t = translations[language] || translations.en;
+
+  const {
+    sessionId,
+    searchHistory,
+    memoryStats,
+    isLoading,
+    resetSession,
     clearSearchHistory,
     loadMemoryStats
   } = useSession();
@@ -57,7 +86,7 @@ const MemoryPanel = ({ isVisible, onToggle }) => {
     }
   };
 
-    // Handle click outside to close panel
+  // Handle click outside to close panel
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (panelRef.current && !panelRef.current.contains(event.target) && isVisible) {
@@ -79,43 +108,43 @@ const MemoryPanel = ({ isVisible, onToggle }) => {
   return (
     <div className="memory-panel" ref={panelRef}>
       <div className="memory-header">
-        <h3>🧠 Memory & Sessions</h3>
+        <h3>{t.memorySessions}</h3>
         <button onClick={onToggle} className="close-btn">✕</button>
       </div>
 
       <div className="memory-content">
         {/* Session Info */}
         <div className="session-info">
-          <h4>Current Session</h4>
+          <h4>{t.currentSession}</h4>
           <div className="session-id">
             <code>{sessionId}</code>
           </div>
-          
+
           <div className="session-actions">
-            <button 
+            <button
               onClick={() => setShowConfirmClear(true)}
               className="btn-secondary"
               disabled={isLoading}
             >
-              🗑️ Reset Session
+              {t.resetSession}
             </button>
-            <button 
+            <button
               onClick={loadMemoryStats}
               className="btn-secondary"
               disabled={isLoading}
             >
-              🔄 Refresh
+              {t.refresh}
             </button>
           </div>
         </div>
 
         {/* Search History */}
         <div className="search-history">
-          <h4>Search History ({searchHistory.length})</h4>
-          
+          <h4>{t.searchHistory(searchHistory.length)}</h4>
+
           {searchHistory.length === 0 ? (
             <div className="empty-history">
-              <p>No search history yet</p>
+              <p>{t.noHistory}</p>
             </div>
           ) : (
             <div className="history-list">
@@ -124,8 +153,8 @@ const MemoryPanel = ({ isVisible, onToggle }) => {
                   <div className="history-header">
                     <span className="type-icon">{getTypeIcon(entry.type)}</span>
                     <span className="query-preview">
-                      {entry.query.length > 50 
-                        ? entry.query.substring(0, 50) + '...' 
+                      {entry.query.length > 50
+                        ? entry.query.substring(0, 50) + '...'
                         : entry.query}
                     </span>
                   </div>
@@ -135,7 +164,7 @@ const MemoryPanel = ({ isVisible, onToggle }) => {
                     </span>
                     {entry.file_count && (
                       <span className="file-count">
-                        📄 {entry.file_count} files
+                        {t.files(entry.file_count)}
                       </span>
                     )}
                   </div>
@@ -145,12 +174,12 @@ const MemoryPanel = ({ isVisible, onToggle }) => {
           )}
 
           {searchHistory.length > 0 && (
-            <button 
+            <button
               onClick={handleClearHistory}
               className="btn-secondary clear-history-btn"
               disabled={isLoading}
             >
-              🧹 Clear History
+              {t.clearHistory}
             </button>
           )}
         </div>
@@ -160,21 +189,21 @@ const MemoryPanel = ({ isVisible, onToggle }) => {
       {showConfirmClear && (
         <div className="confirm-dialog">
           <div className="confirm-content">
-            <h4>⚠️ Confirm Reset</h4>
-            <p>This will clear all conversation memory and search history for this session. Are you sure?</p>
+            <h4>{t.confirmReset}</h4>
+            <p>{t.confirmText}</p>
             <div className="confirm-actions">
-              <button 
+              <button
                 onClick={handleResetSession}
                 className="btn-danger"
                 disabled={isLoading}
               >
-                Yes, Reset
+                {t.yesReset}
               </button>
-              <button 
+              <button
                 onClick={() => setShowConfirmClear(false)}
                 className="btn-secondary"
               >
-                Cancel
+                {t.cancel}
               </button>
             </div>
           </div>

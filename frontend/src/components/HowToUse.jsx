@@ -58,7 +58,7 @@ const translations = {
         {
           icon: '🔧',
           title: 'Chọn tệp',
-          description: 'Chọn tệp bạn muốn hỏi'
+          description: 'Chọn tệp bạn muốn hỏi đáp'
         },
         {
           icon: '🤖',
@@ -72,12 +72,12 @@ const translations = {
       steps: [
         {
           icon: '📝',
-          title: 'Tải mã nguồn lên',
+          title: 'Tải mã lên',
           description: 'Dán hoặc tải lên các tệp mã nguồn'
         },
         {
           icon: '🔧',
-          title: 'Nhận hỗ trợ',
+          title: 'Chọn hỗ trợ',
           description: 'Bình luận, Gỡ lỗi, Tối ưu và Tạo kiểm thử'
         },
         {
