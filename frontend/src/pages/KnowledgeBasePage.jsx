@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import HowToUse from '../components/HowToUse';
@@ -12,6 +12,70 @@ import './KnowledgeBasePage.css';
 // Import highlight.js styles
 import 'highlight.js/styles/github.css';
 
+const locales = {
+  en: {
+    uploadDocuments: "📁 Upload Documents",
+    chooseFile: "Choose File",
+    uploading: "Uploading...",
+    noFile: "No file selected",
+    supported: "Supported: PDF, TXT, MD, DOCX (max 10MB)",
+    upload: "Upload",
+    documentList: "📚 Document List",
+    noDocuments: "No documents yet. Upload files to get started!",
+    aiAssistant: "💬 AI Assistant",
+    chattingWith: "Chatting with",
+    selectedDocuments: "selected document(s)",
+    allDocuments: "Chatting with all documents",
+    memory: "🧠 Memory",
+    askPlaceholder: "Ask about your documents...",
+    send: "📤",
+    referenceSources: "📖 Reference sources",
+    relevance: "Relevance",
+    unknownSource: "Unknown source",
+    error: "Error",
+    connectionError: "Connection error",
+  },
+  vi: {
+    uploadDocuments: "📁 Tải lên tài liệu",
+    chooseFile: "Chọn tệp",
+    uploading: "Đang tải lên...",
+    noFile: "Chưa chọn tệp",
+    supported: "Hỗ trợ: PDF, TXT, MD, DOCX (tối đa 10MB)",
+    upload: "Tải lên",
+    documentList: "📚 Danh sách tài liệu",
+    noDocuments: "Chưa có tài liệu. Hãy tải lên để bắt đầu!",
+    aiAssistant: "💬 Trợ lý AI",
+    chattingWith: "Đang trò chuyện với",
+    selectedDocuments: "tài liệu đã chọn",
+    allDocuments: "Trò chuyện với tất cả tài liệu",
+    memory: "🧠 Bộ nhớ",
+    askPlaceholder: "Hỏi về tài liệu của bạn...",
+    send: "📤",
+    referenceSources: "📖 Nguồn tham khảo",
+    relevance: "Độ liên quan",
+    unknownSource: "Nguồn không xác định",
+    error: "Lỗi",
+    connectionError: "Lỗi kết nối",
+  }
+};
+
+const initialMessages = {
+  en: [
+    {
+      id: 1,
+      type: 'bot',
+      content: "Hello! I'm your AI assistant. Upload documents and ask me anything about them."
+    }
+  ],
+  vi: [
+    {
+      id: 1,
+      type: 'bot',
+      content: "Xin chào! Tôi là trợ lý AI của bạn. Hãy tải lên tài liệu và hỏi tôi bất cứ điều gì về chúng."
+    }
+  ]
+};
+
 // Helper function to convert base64 string to Blob
 function base64ToBlob(base64, mime) {
   const byteChars = atob(base64);
@@ -24,14 +88,16 @@ function base64ToBlob(base64, mime) {
 }
 
 function KnowledgeBasePage({ onNavigate }) {
+  // Use session context
+  const { sessionId, searchHistory, addToSearchHistory } = useSession();
+
+  // Use language context
+  const { language } = useLanguage();
+
+  const t = locales[language];
+
   const [uploadedFile, setUploadedFile] = useState(null);
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: 'bot',
-      content: 'Hello! I\'m your AI assistant. Upload documents and ask me anything about them.'
-    }
-  ]);
+  const [messages, setMessages] = useState(initialMessages[language]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -39,20 +105,18 @@ function KnowledgeBasePage({ onNavigate }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [memoryPanelVisible, setMemoryPanelVisible] = useState(false);
 
-  // Use session context
-  const { sessionId, searchHistory, addToSearchHistory } = useSession();
-
-  // Use language context
-  const { language } = useLanguage();
-
   // State + ref để điều khiển audio TTS
   const [audioPlayingIndex, setAudioPlayingIndex] = useState(null);
   const audioRef = useRef(null);
 
   // Load danh sách files khi component mount
-  React.useEffect(() => {
+  useEffect(() => {
     loadAvailableFiles();
   }, []);
+
+  useEffect(() => {
+    setMessages(initialMessages[language]);
+  }, [language]);
 
   // Hàm play/pause TTS cho message index
   const handlePlayTTS = async (text, index) => {
@@ -154,12 +218,14 @@ function KnowledgeBasePage({ onNavigate }) {
         'text/markdown',
         'text/plain'
       ];
-
-      if (allowedTypes.includes(file.type) || file.name.endsWith('.md')) {
+      const allowedExts = ['.pdf', '.txt', '.md', '.docx'];
+      const fileName = file.name.toLowerCase();
+      const hasAllowedExt = allowedExts.some(ext => fileName.endsWith(ext));
+      if (allowedTypes.includes(file.type) || hasAllowedExt) {
         setUploadedFile(file);
       } else {
-        alert('Please select PDF, Word, or Markdown files.');
-        event.target.value = ''; // Reset input
+        alert('Please select a supported file: PDF, TXT, MD, DOCX.');
+        event.target.value = '';
       }
     }
   };
@@ -291,21 +357,24 @@ function KnowledgeBasePage({ onNavigate }) {
           <div className="left-panel">
             {/* File Upload Section */}
             <div className="file-upload-section">
-              <h3>📁 Upload Documents</h3>
+              <h3>{t.uploadDocuments}</h3>
               <div className="file-upload-container">
                 <div className="file-selection">
                   <input
                     type="file"
                     id="file-upload"
-                    accept=".pdf,.doc,.docx,.md,.txt"
+                    accept=".pdf,.txt,.md,.docx"
                     onChange={handleFileUpload}
                     style={{ display: 'none' }}
                   />
                   <label htmlFor="file-upload" className="choose-file-button">
-                    {uploading ? 'Uploading...' : 'Choose File'}
+                    {uploading ? t.uploading : t.chooseFile}
                   </label>
                   <div className="file-display">
-                    {uploadedFile ? uploadedFile.name : 'No file selected'}
+                    {uploadedFile ? uploadedFile.name : t.noFile}
+                  </div>
+                  <div style={{ fontSize: '0.9em', color: 'white', marginTop: 4 }}>
+                    {t.supported}
                   </div>
                   {uploadedFile && (
                     <button
@@ -313,7 +382,7 @@ function KnowledgeBasePage({ onNavigate }) {
                       onClick={handleUploadClick}
                       disabled={uploading}
                     >
-                      {uploading ? 'Uploading...' : 'Upload'}
+                      {uploading ? t.uploading : t.upload}
                     </button>
                   )}
                 </div>
@@ -322,7 +391,7 @@ function KnowledgeBasePage({ onNavigate }) {
 
             {/* File List Section */}
             <div className="file-list-section">
-              <h3>📚 Document List ({availableFiles?.length || 0})</h3>
+              <h3>{t.documentList} ({availableFiles?.length || 0})</h3>
               {availableFiles && availableFiles.length > 0 ? (
                 <div className="file-list">
                   <div className="select-all-controls">
@@ -330,13 +399,13 @@ function KnowledgeBasePage({ onNavigate }) {
                       className="select-button"
                       onClick={() => setSelectedFiles(availableFiles?.map(file => file.file_id) || [])}
                     >
-                      Select All
+                      {language === 'vi' ? 'Chọn tất cả' : 'Select All'}
                     </button>
                     <button
                       className="select-button"
                       onClick={() => setSelectedFiles([])}
                     >
-                      Deselect All
+                      {language === 'vi' ? 'Bỏ chọn tất cả' : 'Deselect All'}
                     </button>
                   </div>
 
@@ -360,7 +429,7 @@ function KnowledgeBasePage({ onNavigate }) {
                           <div className="file-title">{file.filename}</div>
                           <div className="file-uuid">ID: {file.file_id}</div>
                           <div className="file-upload-time">
-                            📅 {new Date(file.upload_time).toLocaleString('en-US')}
+                            📅 {new Date(file.upload_time).toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US')}
                           </div>
                         </div>
                       </div>
@@ -369,7 +438,7 @@ function KnowledgeBasePage({ onNavigate }) {
                 </div>
               ) : (
                 <div className="no-files">
-                  <p>No documents yet. Upload files to get started!</p>
+                  <p>{t.noDocuments}</p>
                 </div>
               )}
             </div>
@@ -380,12 +449,14 @@ function KnowledgeBasePage({ onNavigate }) {
             <div className="chat-section">
               <div className="chat-header">
                 <div className="chat-title">
-                  <h3>💬 AI Assistant</h3>
+                  <h3>{t.aiAssistant}</h3>
                   <div className="chat-info">
                     {selectedFiles.length > 0 ? (
-                      <span>Chatting with {selectedFiles.length} selected document(s)</span>
+                      <span>
+                        {t.chattingWith} {selectedFiles.length} {t.selectedDocuments}
+                      </span>
                     ) : (
-                      <span>Chatting with all documents</span>
+                      <span>{t.allDocuments}</span>
                     )}
                   </div>
                 </div>
@@ -393,9 +464,9 @@ function KnowledgeBasePage({ onNavigate }) {
                   <button
                     onClick={() => setMemoryPanelVisible(!memoryPanelVisible)}
                     className={`memory-btn ${memoryPanelVisible ? 'active' : ''}`}
-                    title="Memory & Sessions"
+                    title={t.memory}
                   >
-                    🧠 Memory ({searchHistory.length})
+                    {t.memory} ({searchHistory.length})
                   </button>
                 </div>
               </div>
@@ -411,7 +482,7 @@ function KnowledgeBasePage({ onNavigate }) {
                             <button
                               className="tts-btn"
                               onClick={() => handlePlayTTS(message.content, index)}
-                              title="Play audio"
+                              title={language === 'vi' ? 'Phát âm thanh' : 'Play audio'}
                             >
                               {audioPlayingIndex === index ? '⏸️' : '🔊'}
                             </button>
@@ -420,18 +491,20 @@ function KnowledgeBasePage({ onNavigate }) {
                         {message.sources && message.sources.length > 0 && (
                           <div className="message-sources">
                             <details>
-                              <summary>📖 Nguồn tham khảo ({message.sources.length})</summary>
+                              <summary>
+                                {t.referenceSources} ({message.sources.length})
+                              </summary>
                               <div className="sources-list">
-                                {message.sources.map((item, index) => (
-                                  <div key={index} className="source-item">
+                                {message.sources.map((item, idx) => (
+                                  <div key={idx} className="source-item">
                                     <div className="source-title">
-                                      {item?.source?.title || item?.metadata?.title || 'Unknown source'}
+                                      {item?.source?.title || item?.metadata?.title || t.unknownSource}
                                     </div>
                                     <div className="source-content">
                                       {(item?.content || '').substring(0, 200)}...
                                     </div>
                                     <div className="source-score">
-                                      Độ liên quan: {((item?.similarity_score || 0) * 100).toFixed(1)}%
+                                      {t.relevance}: {((item?.similarity_score || 0) * 100).toFixed(1)}%
                                     </div>
                                   </div>
                                 ))}
@@ -461,7 +534,7 @@ function KnowledgeBasePage({ onNavigate }) {
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="Ask about your documents..."
+                      placeholder={t.askPlaceholder}
                       rows="3"
                       disabled={isLoading}
                     />
@@ -470,7 +543,7 @@ function KnowledgeBasePage({ onNavigate }) {
                       disabled={!inputMessage.trim() || isLoading}
                       className="send-button"
                     >
-                      <span>📤</span>
+                      <span>{t.send}</span>
                     </button>
                   </div>
                 </div>
@@ -481,7 +554,7 @@ function KnowledgeBasePage({ onNavigate }) {
       </main>
 
       <HowToUse type="knowledge-base" />
-      
+
       <Footer />
 
       {/* Memory Panel */}

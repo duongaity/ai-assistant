@@ -137,13 +137,13 @@ def upload_file():
             return jsonify({
                 "success": False,
                 "error": "No file provided",
-                "message": "Please select a PDF file to upload"
+                "message": "Please select a file to upload (PDF, TXT, MD, DOCX)"
             }), 400
-        
+
         file = request.files['file']
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '')
-        
+
         # Kiểm tra title có được cung cấp không
         if not title:
             return jsonify({
@@ -151,12 +151,24 @@ def upload_file():
                 "error": "Title is required",
                 "message": "Please provide a title for the document"
             }), 400
-        
+
+        # Kiểm tra định dạng file hợp lệ
+        allowed_exts = ['.pdf', '.txt', '.md', '.docx']
+        import os
+        filename = file.filename.lower()
+        ext = os.path.splitext(filename)[1]
+        if ext not in allowed_exts:
+            return jsonify({
+                "success": False,
+                "error": "Invalid file type",
+                "message": "Only PDF, TXT, MD, DOCX files are supported"
+            }), 400
+
         # Sử dụng service để xử lý file
         success, result_data, error_message, status_code = _knowledge_base_service.process_uploaded_file(
             file, title, description
         )
-        
+
         if success:
             return jsonify({
                 "success": True,
@@ -169,12 +181,12 @@ def upload_file():
                 "error": "Upload failed",
                 "message": error_message
             }), status_code
-        
+
     except Exception as e:
         # Log lỗi chi tiết
         error_trace = traceback.format_exc()
         print(f"Error in file upload: {error_trace}")
-        
+
         return jsonify({
             "success": False,
             "error": "Upload failed",

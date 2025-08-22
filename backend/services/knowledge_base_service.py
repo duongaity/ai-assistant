@@ -39,7 +39,44 @@ class KnowledgeBaseService:
         """
         self.upload_folder = upload_folder
         self.chroma_db_path = chroma_db_path
-        self.allowed_extensions = {'pdf'}
+        self.allowed_extensions = {'pdf', 'txt', 'md', 'docx'}
+        self.max_file_size = 10 * 1024 * 1024  # 10MB
+        self.vector_store = None
+        self._init_langchain_components()
+    
+    def extract_text_from_txt(self, file_path):
+        """
+        Trích xuất text từ file TXT
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            return True, text, 1, None
+        except Exception as e:
+            return False, '', 0, f"TXT extraction error: {str(e)}"
+
+    def extract_text_from_md(self, file_path):
+        """
+        Trích xuất text từ file Markdown
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            return True, text, 1, None
+        except Exception as e:
+            return False, '', 0, f"MD extraction error: {str(e)}"
+
+    def extract_text_from_docx(self, file_path):
+        """
+        Trích xuất text từ file DOCX
+        """
+        try:
+            import docx
+            doc = docx.Document(file_path)
+            text = '\n'.join([para.text for para in doc.paragraphs])
+            return True, text, len(doc.paragraphs), None
+        except Exception as e:
+            return False, '', 0, f"DOCX extraction error: {str(e)}"
         self.max_file_size = 10 * 1024 * 1024  # 10MB
         
         # Tạo thư mục uploads nếu chưa tồn tại
@@ -433,11 +470,16 @@ class KnowledgeBaseService:
             
             # Format kết quả
             formatted_results = []
-            for i, doc in enumerate(docs):
+            for i, (doc, score) in enumerate(docs):
+                # ChromaDB trả về distance (0 = identical, higher = less similar)
+                # Chuyển đổi thành similarity score (0-1, higher = more similar)
+                similarity_score = max(0, min(1, 1 - score))  # vẫn giữ chuẩn hóa về 0-1
+                similarity_score_percent = round(similarity_score * 100, 2)  # chuyển sang 0-100, làm tròn 2 số thập phân
+
                 result_item = {
                     "content": doc.page_content,
                     "metadata": doc.metadata,
-                    "similarity_score": 0.8 - (i * 0.1)  # Điểm giảm dần theo thứ tự
+                    "similarity_score": similarity_score_percent
                 }
                 formatted_results.append(result_item)
                 print(f"📄 Result {i+1}: {doc.page_content[:100]}...")
@@ -589,30 +631,41 @@ class KnowledgeBaseService:
             # Validate file
             if not file or not file.filename:
                 return False, None, "No file selected", 400
-            
+
             if not self.is_allowed_file(file.filename):
-                return False, None, "Only PDF files are allowed", 400
-            
+                return False, None, "Only PDF, TXT, MD, DOCX files are allowed", 400
+
             # Validate file size
             is_valid_size, file_size, size_error = self.validate_file_size(file)
             if not is_valid_size:
                 return False, None, size_error, 413
-            
+
             # Generate unique filename
             unique_filename, timestamp = self.generate_unique_filename(file.filename)
             file_path = os.path.join(self.upload_folder, unique_filename)
-            
+
             # Save file
             file.save(file_path)
-            
-            # Extract text from PDF
-            extract_success, extracted_text, pages_count, extract_error = self.extract_text_from_pdf(file_path)
+
+            # Extract text by file type
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext == '.pdf':
+                extract_success, extracted_text, pages_count, extract_error = self.extract_text_from_pdf(file_path)
+            elif ext == '.txt':
+                extract_success, extracted_text, pages_count, extract_error = self.extract_text_from_txt(file_path)
+            elif ext == '.md':
+                extract_success, extracted_text, pages_count, extract_error = self.extract_text_from_md(file_path)
+            elif ext == '.docx':
+                extract_success, extracted_text, pages_count, extract_error = self.extract_text_from_docx(file_path)
+            else:
+                extract_success, extracted_text, pages_count, extract_error = False, '', 0, 'Unsupported file type'
+
             if not extract_success:
                 # Clean up file if extraction failed
                 if os.path.exists(file_path):
                     os.remove(file_path)
                 return False, None, extract_error, 500
-            
+
             # Calculate file hash
             file_hash = self.calculate_file_hash(file_path)
             
