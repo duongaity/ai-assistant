@@ -144,7 +144,13 @@ echo "AZURE_OPENAI_API_KEY=your-key" >> backend/.env
 echo "AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o-mini" >> backend/.env
 
 # 3. Start all services
-docker-compose up --build
+docker-compose up --build -d
+
+# Remove all containers (force)
+docker rm -f $(docker ps -aq)
+
+# Remove all images (force)
+docker rmi -f $(docker images -q)
 ```
 
 ### Development Mode

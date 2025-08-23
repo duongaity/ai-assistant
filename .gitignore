@@ -135,7 +135,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+# .env
 .envrc
 .venv
 env/
@@ -208,4 +208,4 @@ __marimo__/
 
 frontend/node_modules/
 
-./devcontainer
+# ./devcontainer

@@ -3,7 +3,10 @@ version: '3.8'
 services:
   # Backend service (Flask API)
   backend:
-    image: duongaity/ai-assistant-backend:latest
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    platform: linux/amd64
     container_name: ai-assistant-backend
     ports:
       - "8888:8888"
@@ -11,8 +14,8 @@ services:
       - ./backend/application.env
     environment:
       - FLASK_ENV=production
-    # volumes:
-    #   - ./backend:/app   # Bỏ comment nếu muốn mount code local
+    volumes:
+      - ./backend:/app
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8888/api/health"]
@@ -25,7 +28,9 @@ services:
 
   # Frontend service (React + Vite)
   frontend:
-    image: duongaity/ai-assistant-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: ai-assistant-frontend
     ports:
       - "3000:3000"
