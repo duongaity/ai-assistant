@@ -337,6 +337,34 @@ class ApiService {
       this.sessionId = oldSessionId;
     }
   }
+  
+  /**
+   * Text to Speech API
+   * @param {string} text
+   * @returns {Promise<{ success: boolean, audio_base64: string }>}
+   */
+  async textToSpeech(text) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text })
+      });
+ 
+      const data = await response.json();
+ 
+      if (!response.ok) {
+        throw new Error(data.error || 'Text to Speech failed');
+      }
+ 
+      return data;
+    } catch (error) {
+      console.error('Text to Speech error:', error);
+      throw error;
+    }
+  }
 }
 
 // Singleton instance
