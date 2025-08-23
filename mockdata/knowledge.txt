@@ -1,0 +1,31 @@
+class TaskRepo {
+    std::map<int, Task> items;
+public:
+    void add(const Task &t) {
+        if (items.count(t.id)) {
+            throw std::runtime_error("Task already exists: " + std::to_string(t.id));
+        }
+        items[t.id] = t;
+    }
+
+    Task* get(int id) {
+        auto it = items.find(id);
+        if (it == items.end()) return nullptr;
+        return &it->second;
+    }
+
+    std::vector<Task> all() const {
+        std::vector<Task> res;
+        for (auto &kv : items) {
+            res.push_back(kv.second);
+        }
+        return res;
+    }
+
+    bool complete(int id) {
+        Task* t = get(id);
+        if (!t) return false;
+        t->done = true;
+        return true;
+    }
+};

@@ -3,41 +3,46 @@ version: '3.8'
 services:
   # Backend service (Flask API)
   backend:
-    image: duongaity/ai-assistant-backend:latest
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    platform: linux/amd64
     container_name: ai-assistant-backend
     ports:
       - "8888:8888"
-    # env_file:
-    #   - ./backend/application.env
+    env_file:
+      - ./backend/application.env
     environment:
       - FLASK_ENV=production
-    # volumes:
-    #   - ./backend:/app   # Bỏ comment nếu muốn mount code local
+    volumes:
+      - ./backend:/app
     restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://backend:8888/api/health"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 60s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     networks:
       - ai-assistant-network
 
   # Frontend service (React + Vite)
   frontend:
-    image: duongaity/ai-assistant-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: ai-assistant-frontend
     ports:
       - "3000:3000"
     depends_on:
       - backend
     restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://frontend:80"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 30s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - ai-assistant-network
 
