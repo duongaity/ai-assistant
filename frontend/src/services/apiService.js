@@ -8,7 +8,7 @@
  * - Cache management
  */
 
-const API_BASE_URL = 'http://backend:8888/api';
+const API_BASE_URL = 'http://us-east-1.console.aws.amazon.com/';
 class ApiService {
   constructor() {
     this.sessionId = this.getOrCreateSessionId();
