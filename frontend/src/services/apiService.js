@@ -8,7 +8,7 @@
  * - Cache management
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8888/api';
+const API_BASE_URL = 'http://localhost:8888/api';
 class ApiService {
   constructor() {
     this.sessionId = this.getOrCreateSessionId();
