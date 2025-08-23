@@ -8,7 +8,7 @@
  * - Cache management
  */
 
-const API_BASE_URL = 'http://us-east-1.console.aws.amazon.com/';
+const API_BASE_URL = 'http://ec2-44-204-83-69.compute-1.amazonaws.com/';
 class ApiService {
   constructor() {
     this.sessionId = this.getOrCreateSessionId();
