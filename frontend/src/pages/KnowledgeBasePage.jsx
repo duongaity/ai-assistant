@@ -140,7 +140,7 @@ function KnowledgeBasePage({ onNavigate }) {
 
       if (response.success) {
         const audioBase64 = response.audio_base64;
-        const mimeType = response.mimeType || 'audio/mpeg';
+        const mimeType = response.mimeType || 'audio/wav';
         console.log('Audio base64 length:', audioBase64.length);
         console.log('Audio MIME type:', mimeType);
 
