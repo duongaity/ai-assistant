@@ -808,78 +808,66 @@ def chat_with_knowledge_base():
     try:
         # Bước 1: Xác thực dữ liệu đầu vào
         data = request.get_json()
+        
         if not data or 'message' not in data:
             return jsonify({
                 "success": False,
                 "error": "Message is required"
             }), 400
+        
         message = data['message'].strip()
         if not message:
             return jsonify({
                 "success": False,
                 "error": "Message cannot be empty"
             }), 400
+        
         session_id = data.get('session_id', None)
         max_results = data.get('max_results', 3)
         file_ids = data.get('file_ids', None)
         display_language = data.get('display_language', 'en')  # Ngôn ngữ hiển thị (en/vi)
-
-        # --- Bổ sung: Phát hiện ngôn ngữ tự nhiên và ngôn ngữ lập trình ---
-        detected_language = None
-        detected_code_language = None
-        language_detect_message = ""
-        try:
-            from langdetect import detect, DetectorFactory
-            DetectorFactory.seed = 0
-            # Nếu input có nhiều dòng và nhiều ký tự đặc biệt, thử phát hiện là code
-            import re
-            code_like = bool(re.search(r"[;{}=<>]", message)) or (len(message.splitlines()) > 2)
-            if code_like:
-                try:
-                    from guesslang import Guess
-                    guess = Guess()
-                    code_lang = guess.language_name(message)
-                    detected_code_language = code_lang
-                    language_detect_message += f"Phát hiện bạn nhập code. Ngôn ngữ lập trình: {code_lang}. "
-                except Exception as e:
-                    language_detect_message += "Không phát hiện được ngôn ngữ lập trình. "
-            # Dù là code hay không, vẫn thử detect ngôn ngữ tự nhiên
-            try:
-                lang = detect(message)
-                detected_language = lang
-                language_detect_message += f"Ngôn ngữ phát hiện: {lang}. "
-            except Exception as e:
-                language_detect_message += "Không phát hiện được ngôn ngữ tự nhiên. "
-        except Exception as e:
-            language_detect_message += "Không thể phát hiện ngôn ngữ do thiếu thư viện. "
-
+        
         # Debug log để kiểm tra tham số nhận được
-        print(f"Knowledge Base API - Display Language: {display_language}, Message: {message[:50]}... {language_detect_message}")
-
+        print(f"Knowledge Base API - Display Language: {display_language}, Message: {message[:50]}...")
+        
         # Bước 2: Tìm kiếm trong knowledge base
         import time
         search_start = time.time()
+        
         if file_ids:
+            # Tìm kiếm trong các file cụ thể
             search_success, search_results, search_error = _knowledge_base_service.search_in_multiple_files(
                 query=message,
                 filename_uuids=file_ids,
                 max_results=max_results
             )
         else:
+            # Tìm kiếm trong toàn bộ knowledge base
             search_success, search_results, search_error = _knowledge_base_service.search_knowledge_base(
                 query=message,
                 max_results=max_results
             )
+        
         search_time = round(time.time() - search_start, 3)
+        
         if not search_success:
             return jsonify({
                 "success": False,
                 "error": f"Search failed: {search_error}"
             }), 500
-
+        
         # Bước 3: Tạo context từ các tài liệu tìm được
         if not search_results:
-            ai_response = f"""Xin lỗi, tôi không tìm thấy thông tin liên quan đến câu hỏi \"{message}\" trong knowledge base hiện tại.\n\n{language_detect_message}\n\nCó thể bạn muốn:\n- Kiểm tra lại từ khóa tìm kiếm\n- Upload thêm tài liệu liên quan\n- Đặt câu hỏi cụ thể hơn\n\nBạn có thể upload file PDF chứa thông tin bạn cần thông qua trang Knowledge Base."""
+            # Không tìm thấy tài liệu liên quan
+            ai_response = f"""Xin lỗi, tôi không tìm thấy thông tin liên quan đến câu hỏi "{message}" trong knowledge base hiện tại.
+            
+Có thể bạn muốn:
+- Kiểm tra lại từ khóa tìm kiếm
+- Upload thêm tài liệu liên quan
+- Đặt câu hỏi cụ thể hơn
+
+Bạn có thể upload file PDF chứa thông tin bạn cần thông qua trang Knowledge Base."""
+
             return jsonify({
                 "success": True,
                 "response": ai_response,
@@ -890,71 +878,99 @@ def chat_with_knowledge_base():
                     "search_time": f"{search_time}s"
                 }
             }), 200
-
+        
         # Bước 4: Tạo context cho AI từ các tài liệu tìm được
         context_parts = []
-        doc_languages = set()
-        doc_code_languages = set()
         for i, result in enumerate(search_results[:max_results], 1):
             try:
+                # Safe access to result data
                 source = result.get('source', {})
                 title = source.get('title', 'Unknown source')
                 content = result.get('content', '')
-                # Thử phát hiện ngôn ngữ tài liệu (nếu có)
-                try:
-                    from langdetect import detect
-                    doc_lang = detect(content)
-                    doc_languages.add(doc_lang)
-                except Exception:
-                    pass
-                # Thử phát hiện ngôn ngữ code trong tài liệu (nếu có)
-                try:
-                    from guesslang import Guess
-                    guess = Guess()
-                    code_lang = guess.language_name(content)
-                    if code_lang and code_lang != "Unknown":
-                        doc_code_languages.add(code_lang)
-                except Exception:
-                    pass
+                
                 source_info = f"[Nguồn {i}: {title}]"
                 context_parts.append(f"{source_info}\n{content}")
             except Exception as e:
                 print(f"Error processing search result {i}: {str(e)}")
                 print(f"Result structure: {result}")
+                # Continue with next result instead of failing completely
                 continue
+        
         context = "\n\n".join(context_parts)
-
-        # Bước 5: Cảnh báo nếu ngôn ngữ không khớp
-        warning_message = ""
-        if detected_code_language and doc_code_languages and detected_code_language not in doc_code_languages:
-            warning_message += f"⚠️ Cảnh báo: Bạn nhập code {detected_code_language}, nhưng tài liệu liên quan chủ yếu là {', '.join(doc_code_languages)}.\n"
-        if detected_language and doc_languages and detected_language not in doc_languages:
-            warning_message += f"⚠️ Cảnh báo: Ngôn ngữ bạn nhập ({detected_language}) không khớp với tài liệu ({', '.join(doc_languages)}).\n"
-        if detected_code_language:
-            warning_message += f"Ngôn ngữ lập trình bạn nhập: {detected_code_language}.\n"
-
-        # Bước 6: Tạo prompt cho AI với thông tin từ knowledge base
+        
+        # Bước 5: Tạo prompt cho AI
+        # Bước 5: Tạo prompt cho AI với thông tin từ knowledge base
         if display_language == 'vi':
-            ai_prompt = f"""{warning_message}\nBạn là một AI Assistant thông minh và thân thiện. Hãy trả lời câu hỏi của người dùng CHÍNH XÁC dựa trên thông tin từ các tài liệu được cung cấp.\n\nCâu hỏi: {message}\n\nThông tin từ tài liệu:\n{context}\n\n**QUAN TRỌNG - QUY TẮC TRẢ LỜI:**\n- CHỈ trả lời dựa trên thông tin có trong các tài liệu được cung cấp ở trên\n- KHÔNG bịa đặt, suy đoán hoặc thêm thông tin không có trong tài liệu\n- Nếu thông tin không đủ hoặc không có trong tài liệu, hãy nói rõ \"Thông tin này không có trong tài liệu được cung cấp\"\n- Khi trích dẫn thông tin, hãy đề cập nguồn cụ thể (ví dụ: \"Theo tài liệu X...\")\n\nHãy trả lời một cách tự nhiên, thân thiện và dễ hiểu. Sử dụng format markdown để trình bày đẹp mắt:\n- Sử dụng **in đậm** cho từ khóa quan trọng\n- Dùng `code` cho các thuật ngữ kỹ thuật\n- Chia thành các đoạn ngắn, dễ đọc\n- Sử dụng bullet points (•) hoặc số thứ tự khi liệt kê\n- Thêm emoji phù hợp để làm sinh động (📝, 💡, ⚠️, ✅, etc.)\n\nSử dụng tiếng Việt.\n\nCâu trả lời:"
-        else:
-            ai_prompt = f"""{warning_message}\nYou are an intelligent and friendly AI Assistant. Please answer the user's question ACCURATELY based on the information from the provided documents.\n\nQuestion: {message}\n\nInformation from documents:\n{context}\n\n**IMPORTANT - RESPONSE RULES:**\n- ONLY answer based on information available in the documents provided above\n- DO NOT fabricate, speculate, or add information not present in the documents\n- If information is insufficient or not available in the documents, clearly state \"This information is not available in the provided documents\"\n- When citing information, mention the specific source (e.g., \"According to document X...\")\n\nPlease respond naturally, friendly, and clearly. Use markdown formatting for better presentation:\n- Use **bold** for important keywords\n- Use `code` for technical terms\n- Break into short, easy-to-read paragraphs\n- Use bullet points (•) or numbered lists when listing items\n- Add appropriate emojis to make it engaging (📝, 💡, ⚠️, ✅, etc.)\n\nUse English.\n\nAnswer:"
+            ai_prompt = f"""Bạn là một AI Assistant thông minh và thân thiện. Hãy trả lời câu hỏi của người dùng CHÍNH XÁC dựa trên thông tin từ các tài liệu được cung cấp.
 
-        # Bước 7: Sử dụng AI service để tạo câu trả lời với Langchain memory
+Câu hỏi: {message}
+
+Thông tin từ tài liệu:
+{context}
+
+**QUAN TRỌNG - QUY TẮC TRẢ LỜI:**
+- CHỈ trả lời dựa trên thông tin có trong các tài liệu được cung cấp ở trên
+- KHÔNG bịa đặt, suy đoán hoặc thêm thông tin không có trong tài liệu
+- Nếu thông tin không đủ hoặc không có trong tài liệu, hãy nói rõ "Thông tin này không có trong tài liệu được cung cấp"
+- Khi trích dẫn thông tin, hãy đề cập nguồn cụ thể (ví dụ: "Theo tài liệu X...")
+
+Hãy trả lời một cách tự nhiên, thân thiện và dễ hiểu. Sử dụng format markdown để trình bày đẹp mắt:
+- Sử dụng **in đậm** cho từ khóa quan trọng
+- Dùng `code` cho các thuật ngữ kỹ thuật
+- Chia thành các đoạn ngắn, dễ đọc
+- Sử dụng bullet points (•) hoặc số thứ tự khi liệt kê
+- Thêm emoji phù hợp để làm sinh động (📝, 💡, ⚠️, ✅, etc.)
+
+Sử dụng tiếng Việt.
+
+Câu trả lời:"""
+        else:
+            ai_prompt = f"""You are an intelligent and friendly AI Assistant. Please answer the user's question ACCURATELY based on the information from the provided documents.
+
+Question: {message}
+
+Information from documents:
+{context}
+
+**IMPORTANT - RESPONSE RULES:**
+- ONLY answer based on information available in the documents provided above
+- DO NOT fabricate, speculate, or add information not present in the documents
+- If information is insufficient or not available in the documents, clearly state "This information is not available in the provided documents"
+- When citing information, mention the specific source (e.g., "According to document X...")
+
+Please respond naturally, friendly, and clearly. Use markdown formatting for better presentation:
+- Use **bold** for important keywords
+- Use `code` for technical terms
+- Break into short, easy-to-read paragraphs
+- Use bullet points (•) or numbered lists when listing items
+- Add appropriate emojis to make it engaging (📝, 💡, ⚠️, ✅, etc.)
+
+Use English.
+
+Answer:"""
+
+        # Bước 6: Sử dụng AI service để tạo câu trả lời với Langchain memory
         from services.ai_service import AIService
         from services.langchain_service import LangchainService
+        
+        # Khởi tạo services với session support
         langchain_service = LangchainService()
         ai_service = AIService(langchain_service=langchain_service)
+        
+        # Sử dụng Langchain RAG với session memory
         ai_result = langchain_service.chat_with_rag(
             question=ai_prompt,
             chat_history=[],
             session_id=session_id
         )
+        
         if not ai_result["success"]:
             return jsonify({
                 "success": False,
                 "error": f"AI processing failed: {ai_result.get('error', 'Unknown error')}"
             }), 500
-        # Bước 8: Trả về kết quả với memory info
+        
+        # Bước 7: Trả về kết quả với memory info
         response_data = {
             "success": True,
             "response": ai_result["answer"],
@@ -968,10 +984,13 @@ def chat_with_knowledge_base():
                 "related_searches": ai_result.get("search_context", {}).get("related_searches", [])
             }
         }
+        
         return jsonify(response_data), 200
+        
     except Exception as e:
         error_trace = traceback.format_exc()
         print(f"Error in knowledge base chat: {error_trace}")
+        
         return jsonify({
             "success": False,
             "error": f"Chat processing failed: {str(e)}"
