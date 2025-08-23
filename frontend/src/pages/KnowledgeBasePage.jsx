@@ -115,7 +115,9 @@ function KnowledgeBasePage({ onNavigate }) {
   }, []);
 
   useEffect(() => {
-    setMessages(initialMessages[language]);
+    if (messages.length === 1) {
+      setMessages(initialMessages[language]);
+    }
   }, [language]);
 
   // Hàm play/pause TTS cho message index
@@ -137,8 +139,8 @@ function KnowledgeBasePage({ onNavigate }) {
       console.log('TTS API response:', response);
 
       if (response.success) {
-        const audioBase64 = response.data.audio_base64;
-        const mimeType = response.data.mimeType || 'audio/wav';
+        const audioBase64 = response.audio_base64;
+        const mimeType = response.mimeType || 'audio/mpeg';
         console.log('Audio base64 length:', audioBase64.length);
         console.log('Audio MIME type:', mimeType);
 
