@@ -9,6 +9,7 @@
  */
 
 const API_BASE_URL = 'http://ec2-44-204-83-69.compute-1.amazonaws.com:8888/api';
+// const API_BASE_URL = 'http://localhost:8888/api';
 class ApiService {
   constructor() {
     this.sessionId = this.getOrCreateSessionId();
